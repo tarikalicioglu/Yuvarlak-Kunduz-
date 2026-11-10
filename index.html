@@ -61,6 +61,8 @@
   .lv.boss{background:#ff8fb1;color:#7a1f3a;box-shadow:0 4px 0 #c95a80}
   .lv.boss.locked{background:rgba(255,255,255,.22);color:rgba(255,255,255,.7);box-shadow:none}
   .row{display:flex;gap:10px}
+  #pauseBtn{position:fixed;top:calc(62px + env(safe-area-inset-top));right:10px;width:46px;height:46px;border-radius:50%;border:none;
+    background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer;padding:0}
   .mid{font-family:inherit;font-weight:800;font-size:16px;border:none;border-radius:999px;padding:8px 6px;width:158px;
     background:#fff;color:#2b5d8a;box-shadow:0 5px 0 #b9cfe2;cursor:pointer;white-space:nowrap}
   .mid:active{transform:translateY(3px);box-shadow:0 2px 0 #b9cfe2}
@@ -97,6 +99,7 @@
   <span class="pill hidden" id="hPow" style="display:inline-block;margin-top:8px"></span>
 </div>
 <div id="toast"></div>
+<button id="pauseBtn" class="hidden" aria-label="Duraklat">⏸</button>
 
 <div class="overlay" id="menu">
   <div>
@@ -160,6 +163,17 @@
     <button class="big alt" id="admLimit"></button>
     <button class="small" id="admReset">Bugünkü süreyi sıfırla</button>
     <button class="big" id="admClose">Kapat</button>
+  </div>
+</div>
+
+<div class="overlay dim hidden" id="pause">
+  <h2>Duraklatıldı</h2>
+  <div class="btns" style="margin-top:18px">
+    <button class="big" id="resumeBtn">▶ Devam Et</button>
+    <button class="big alt" id="restartBtn">↻ Baştan Başla</button>
+    <button class="big alt" id="pauseLevelsBtn">🗺️ Leveller</button>
+    <button class="big alt" id="pauseMenuBtn">🏠 Ana Menü</button>
+    <button class="small" id="pauseMuteBtn">🔊 Ses: Açık</button>
   </div>
 </div>
 
@@ -1334,7 +1348,7 @@ const ball = { s: -1.5, lat: 0, y: R, targetLat: 0, vy: 0, rollV: 0, speed: 7.5,
   coyote: 0, checkpoint: 0, invuln: 0, wait: 0, onMover: null };
 let squashT = 0, squashAmt = 0;
 let lives = START_LIVES, apples = 0, winT = 0, menuT = 0, time = 0, celebrateT = 0, secAcc = 0, gScale = 1, lastHudPow = '', lastM = -1;
-const ballWorld = new THREE.Vector3();
+const ballWorld = new THREE.Vector3(), tmpCol = new THREE.Color();
 const power = { kind: null, t: 0, shield: false };
 const boss = { active: false, s: 0, mesh: null };
 let follower = null;
@@ -1350,21 +1364,48 @@ const worldIdx = n => Math.min(9, Math.floor((n - 1) / 50));
 const needStars = n => worldIdx(n) * 90;
 const canPlay = n => !!save.admin || (n <= save.unlocked && totalStars() >= needStars(n));
 function rollDay(){ const t = dateStr(); if (save.day !== t){ save.day = t; save.sec = 0; } }
-function limitHit(){ rollDay(); return save.limitMin > 0 && (save.sec || 0) >= save.limitMin * 60; }
+function limitHit(){ rollDay(); return !save.admin && save.limitMin > 0 && (save.sec || 0) >= save.limitMin * 60; }
 
 // ---------- costumes ----------
 const SHOP = [
-  { id: 'party', slot: 'hat',  name: 'Parti şapkası', icon: '🥳', price: 60 },
-  { id: 'cap',   slot: 'hat',  name: 'Kasket',        icon: '🧢', price: 150 },
-  { id: 'crown', slot: 'hat',  name: 'Taç',           icon: '👑', price: 400 },
-  { id: 'sun',   slot: 'face', name: 'Gözlük',        icon: '🕶️', price: 120 },
-  { id: 'bow',   slot: 'neck', name: 'Papyon',        icon: '🎀', price: 90 },
-  { id: 'scarf', slot: 'neck', name: 'Atkı',          icon: '🧣', price: 200 },
-  { id: 'gold',  slot: 'fur',  name: 'Altın kürk',    icon: '✨', price: 300, color: 0xe0a030 },
-  { id: 'pink',  slot: 'fur',  name: 'Pembe kürk',    icon: '🌸', price: 250, color: 0xf08ab0 },
-  { id: 'white', slot: 'fur',  name: 'Kar kürk',      icon: '❄️', price: 350, color: 0xf2efe8 },
-  { id: 'blue',  slot: 'fur',  name: 'Mavi kürk',     icon: '💙', price: 300, color: 0x5a9ae0 }
+  { id: 'party',  slot: 'hat',  name: 'Parti şapkası', icon: '🥳', price: 60 },
+  { id: 'chef',   slot: 'hat',  name: 'Aşçı şapkası',  icon: '👨‍🍳', price: 140 },
+  { id: 'cap',    slot: 'hat',  name: 'Kasket',        icon: '🧢', price: 150 },
+  { id: 'flower', slot: 'hat',  name: 'Çiçek tacı',    icon: '🌼', price: 160 },
+  { id: 'cowboy', slot: 'hat',  name: 'Kovboy',        icon: '🤠', price: 180 },
+  { id: 'santa',  slot: 'hat',  name: 'Noel şapkası',  icon: '🎅', price: 200 },
+  { id: 'pirate', slot: 'hat',  name: 'Korsan',        icon: '🏴‍☠️', price: 220 },
+  { id: 'tophat', slot: 'hat',  name: 'Silindir',      icon: '🎩', price: 240 },
+  { id: 'wizard', slot: 'hat',  name: 'Büyücü',        icon: '🧙', price: 260 },
+  { id: 'viking', slot: 'hat',  name: 'Viking',        icon: '🪓', price: 280 },
+  { id: 'prop',   slot: 'hat',  name: 'Pervaneli',     icon: '🚁', price: 320 },
+  { id: 'crown',  slot: 'hat',  name: 'Taç',           icon: '👑', price: 400 },
+  { id: 'nose',   slot: 'face', name: 'Palyaço burnu', icon: '🔴', price: 70 },
+  { id: 'round',  slot: 'face', name: 'Yuvarlak gözlük', icon: '👓', price: 100 },
+  { id: 'stache', slot: 'face', name: 'Bıyık',         icon: '🥸', price: 110 },
+  { id: 'sun',    slot: 'face', name: 'Güneş gözlüğü', icon: '🕶️', price: 120 },
+  { id: 'mask',   slot: 'face', name: 'Kahraman maskesi', icon: '🦸', price: 170 },
+  { id: 'bow',    slot: 'neck', name: 'Papyon',        icon: '🎀', price: 90 },
+  { id: 'tie',    slot: 'neck', name: 'Kravat',        icon: '👔', price: 100 },
+  { id: 'medal',  slot: 'neck', name: 'Madalya',       icon: '🥇', price: 180 },
+  { id: 'scarf',  slot: 'neck', name: 'Atkı',          icon: '🧣', price: 200 },
+  { id: 'cape',   slot: 'neck', name: 'Pelerin',       icon: '🦹', price: 350 },
+  { id: 'orange', slot: 'fur',  name: 'Turuncu kürk',  icon: '🧡', price: 200, color: 0xf08a2a },
+  { id: 'pink',   slot: 'fur',  name: 'Pembe kürk',    icon: '🌸', price: 250, color: 0xf08ab0 },
+  { id: 'green',  slot: 'fur',  name: 'Yeşil kürk',    icon: '💚', price: 250, color: 0x5ab85a },
+  { id: 'purple', slot: 'fur',  name: 'Mor kürk',      icon: '💜', price: 280, color: 0x9a6ae0 },
+  { id: 'gold',   slot: 'fur',  name: 'Altın kürk',    icon: '✨', price: 300, color: 0xe0a030 },
+  { id: 'blue',   slot: 'fur',  name: 'Mavi kürk',     icon: '💙', price: 300, color: 0x5a9ae0 },
+  { id: 'black',  slot: 'fur',  name: 'Siyah kürk',    icon: '🖤', price: 300, color: 0x3a3a44 },
+  { id: 'white',  slot: 'fur',  name: 'Kar kürk',      icon: '❄️', price: 350, color: 0xf2efe8 },
+  { id: 'rainbow',slot: 'fur',  name: 'Gökkuşağı kürk', icon: '🌈', price: 800, color: 0xff6a6a },
+  { id: 'tbubble',slot: 'trail', name: 'Baloncuk izi', icon: '🫧', price: 250, colors: [0xc4ecff, 0xffffff] },
+  { id: 'tstar',  slot: 'trail', name: 'Yıldız izi',   icon: '🌟', price: 300, colors: [0xffe066, 0xfff4b0] },
+  { id: 'theart', slot: 'trail', name: 'Pembe iz',     icon: '💖', price: 350, colors: [0xff6a9a, 0xffb0c8] },
+  { id: 'tfire',  slot: 'trail', name: 'Ateş izi',     icon: '🔥', price: 400, colors: [0xff7a1a, 0xffd23a, 0xff3a1a] },
+  { id: 'train',  slot: 'trail', name: 'Gökkuşağı izi', icon: '🌈', price: 500, colors: [0xff5a5a, 0xffb03a, 0xffe14a, 0x5ad86a, 0x5aa8ff, 0xb07aff] }
 ];
+const SLOT_NAMES = { hat: '🎩 Şapkalar', face: '👓 Yüz', neck: '🎀 Boyun', fur: '🎨 Kürk rengi', trail: '✨ Arkada iz' };
 const furMats = [], furDark = [];
 beaver.root.traverse(o => {
   if (!o.isMesh) return;
@@ -1376,38 +1417,62 @@ beaver.root.traverse(o => {
 const ANCH_S = { top: [0, 1.25, 0], eyeY: 1.06, eyeZ: -0.31, eyeDX: 0.115, neckY: 0.74, neckZ: -0.27, neckR: 0.27, s: 1 };
 const ANCH_B = { top: [0, 0.47, -0.08], eyeY: 0.188, eyeZ: -0.48, eyeDX: 0.098, neckY: -0.12, neckZ: -0.5, neckR: 0.51, s: 0.9 };
 function accGroup(a){
-  const g = new THREE.Group(), w = save.wear, s = a.s;
+  const g = new THREE.Group(), w = save.wear, s = a.s, isBall = a === ANCH_B;
+  const M = (geo, col, x, y, z, par) => { const m = new THREE.Mesh(geo, typeof col === 'number' ? lam(col) : col); m.position.set(x || 0, y || 0, z || 0); (par || g).add(m); return m; };
   const hat = new THREE.Group(); hat.position.set(a.top[0], a.top[1], a.top[2]); hat.scale.setScalar(s); g.add(hat);
-  if (w.hat === 'party'){
-    const c = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.36, 14), lam(0xff5ab0)); c.position.y = 0.16; hat.add(c);
-    const p = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), lam(0xffe14a)); p.position.y = 0.35; hat.add(p);
-  } else if (w.hat === 'cap'){
-    const c = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), lam(0xe8333a)); c.position.y = -0.06; hat.add(c);
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.2), lam(0xc0202a)); b.position.set(0, -0.04, -0.28); hat.add(b);
-  } else if (w.hat === 'crown'){
-    const gm = lam(0xffd23a, { emissive: 0x6a4a00 });
-    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 14), gm); c.position.y = 0.04; hat.add(c);
-    for (let k = 0; k < 5; k++){ const t = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 6), gm); const an = k / 5 * Math.PI * 2; t.position.set(Math.cos(an) * 0.14, 0.14, Math.sin(an) * 0.14); hat.add(t); }
+  const dome = (col, r) => M(new THREE.SphereGeometry(r || 0.24, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), col, 0, -0.06, 0, hat);
+  const cyl = (rt, rb, h, col, y) => M(new THREE.CylinderGeometry(rt, rb, h, 16), col, 0, y, 0, hat);
+  switch (w.hat){
+    case 'party': M(new THREE.ConeGeometry(0.15, 0.36, 14), 0xff5ab0, 0, 0.16, 0, hat); M(new THREE.SphereGeometry(0.05, 10, 8), 0xffe14a, 0, 0.35, 0, hat); break;
+    case 'cap': dome(0xe8333a); M(new THREE.BoxGeometry(0.3, 0.03, 0.2), 0xc0202a, 0, -0.04, -0.28, hat); break;
+    case 'crown': { const gm = lam(0xffd23a, { emissive: 0x6a4a00 }); cyl(0.17, 0.17, 0.1, gm, 0.04);
+      for (let k = 0; k < 5; k++){ const an = k / 5 * Math.PI * 2; M(new THREE.ConeGeometry(0.045, 0.12, 6), gm, Math.cos(an) * 0.14, 0.14, Math.sin(an) * 0.14, hat); } break; }
+    case 'cowboy': cyl(0.32, 0.32, 0.03, 0x8a5a2e, 0.0); cyl(0.14, 0.17, 0.2, 0x8a5a2e, 0.1); cyl(0.175, 0.175, 0.04, 0x4a2a14, 0.03); break;
+    case 'wizard': cyl(0.28, 0.28, 0.03, 0x6a3fc0, 0.0); M(new THREE.ConeGeometry(0.19, 0.5, 14), 0x6a3fc0, 0, 0.26, 0, hat); M(new THREE.SphereGeometry(0.045, 8, 6), 0xffe14a, 0, 0.2, -0.13, hat); break;
+    case 'chef': cyl(0.15, 0.15, 0.2, 0xffffff, 0.08); { const p = M(new THREE.SphereGeometry(0.21, 14, 10), 0xffffff, 0, 0.24, 0, hat); p.scale.y = 0.6; } break;
+    case 'pirate': dome(0x1a1a1a, 0.25); M(new THREE.BoxGeometry(0.42, 0.14, 0.04), 0x1a1a1a, 0, 0.1, -0.2, hat); M(new THREE.SphereGeometry(0.05, 8, 6), 0xffffff, 0, 0.1, -0.23, hat); break;
+    case 'flower': { const cols = [0xff8fb1, 0xffffff, 0xffe14a, 0xc5a0ff, 0xff6a6a, 0x7cc4ff, 0xffb03a, 0xffffff];
+      for (let k = 0; k < 8; k++){ const an = k / 8 * Math.PI * 2; M(new THREE.SphereGeometry(0.06, 8, 6), cols[k], Math.cos(an) * 0.2, -0.03, Math.sin(an) * 0.2, hat); } break; }
+    case 'tophat': cyl(0.27, 0.27, 0.03, 0x1a1a1a, 0.0); cyl(0.16, 0.16, 0.3, 0x1a1a1a, 0.15); cyl(0.165, 0.165, 0.05, 0xe8333a, 0.04); break;
+    case 'santa': { cyl(0.21, 0.21, 0.07, 0xffffff, 0.0); const c = M(new THREE.ConeGeometry(0.19, 0.42, 14), 0xe8333a, -0.05, 0.2, 0, hat); c.rotation.z = 0.35; M(new THREE.SphereGeometry(0.06, 8, 6), 0xffffff, -0.13, 0.4, 0, hat); break; }
+    case 'viking': dome(0x9aa0a8); [-1, 1].forEach(sd => { const h = M(new THREE.ConeGeometry(0.06, 0.26, 8), 0xf0e6c8, sd * 0.25, 0.08, 0, hat); h.rotation.z = -sd * 0.7; }); break;
+    case 'prop': { dome(0x3a8aff, 0.22); cyl(0.015, 0.015, 0.14, 0xffe14a, 0.2);
+      const blade = M(new THREE.BoxGeometry(0.42, 0.02, 0.07), 0xe8333a, 0, 0.27, 0, hat); g.userData.spin = blade; break; }
   }
-  if (w.face === 'sun'){
-    const bm = lam(0x111111);
-    [-1, 1].forEach(sd => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.095 * s, 12, 10), bm); l.scale.z = 0.35; l.position.set(sd * a.eyeDX, a.eyeY, a.eyeZ); g.add(l); });
-    const br = new THREE.Mesh(new THREE.BoxGeometry(0.1 * s, 0.025, 0.02), bm); br.position.set(0, a.eyeY + 0.01, a.eyeZ); g.add(br);
+  const ey = a.eyeY, ez = a.eyeZ, dx = a.eyeDX;
+  switch (w.face){
+    case 'sun': { const bm = lam(0x111111);
+      [-1, 1].forEach(sd => { const l = M(new THREE.SphereGeometry(0.095 * s, 12, 10), bm, sd * dx, ey, ez); l.scale.z = 0.35; });
+      M(new THREE.BoxGeometry(0.1 * s, 0.025, 0.02), bm, 0, ey + 0.01, ez); break; }
+    case 'round': { const gm = lam(0xd4a020);
+      [-1, 1].forEach(sd => M(new THREE.TorusGeometry(0.095 * s, 0.013, 6, 20), gm, sd * dx, ey, ez - 0.02));
+      M(new THREE.BoxGeometry(0.06 * s, 0.02, 0.02), gm, 0, ey, ez - 0.02); break; }
+    case 'stache': [-1, 1].forEach(sd => { const m = M(new THREE.SphereGeometry(0.07 * s, 10, 8), 0x3a2010, sd * 0.06 * s, ey - 0.155 * s, ez - 0.06 * s); m.scale.set(1.3, 0.45, 0.5); m.rotation.z = sd * 0.35; }); break;
+    case 'mask': M(new THREE.BoxGeometry(0.46 * s, 0.13 * s, 0.03), 0xe8333a, 0, ey, ez + 0.05); break;
+    case 'nose': M(new THREE.SphereGeometry(0.075 * s, 12, 10), 0xff2a2a, 0, ey - 0.1 * s, ez - 0.1 * s); break;
   }
-  if (w.neck === 'bow'){
-    const rm = lam(0xff3a6a);
-    [-1, 1].forEach(sd => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.07 * s, 0.14 * s, 8), rm); c.rotation.z = sd * Math.PI / 2; c.position.set(sd * 0.075 * s, a.neckY, a.neckZ); g.add(c); });
-    const k = new THREE.Mesh(new THREE.SphereGeometry(0.035 * s, 8, 6), rm); k.position.set(0, a.neckY, a.neckZ); g.add(k);
-  } else if (w.neck === 'scarf'){
-    const t = new THREE.Mesh(new THREE.TorusGeometry(a.neckR, 0.055, 8, 24), lam(0x3a8aff)); t.rotation.x = Math.PI / 2; t.position.y = a.neckY + (a === ANCH_B ? 0.1 : 0.02); g.add(t);
+  const ny = a.neckY, nz = a.neckZ;
+  switch (w.neck){
+    case 'bow': { const rm = lam(0xff3a6a);
+      [-1, 1].forEach(sd => { const c = M(new THREE.ConeGeometry(0.07 * s, 0.14 * s, 8), rm, sd * 0.075 * s, ny, nz); c.rotation.z = sd * Math.PI / 2; });
+      M(new THREE.SphereGeometry(0.035 * s, 8, 6), rm, 0, ny, nz); break; }
+    case 'scarf': { const t = M(new THREE.TorusGeometry(a.neckR, 0.055, 8, 24), 0x3a8aff, 0, ny + (isBall ? 0.1 : 0.02), 0); t.rotation.x = Math.PI / 2; break; }
+    case 'tie': M(new THREE.BoxGeometry(0.06 * s, 0.05 * s, 0.03), 0xc0202a, 0, ny, nz); M(new THREE.BoxGeometry(0.085 * s, 0.2 * s, 0.025), 0xe8333a, 0, ny - 0.12 * s, nz + (isBall ? 0.03 : -0.02)); break;
+    case 'medal': { M(new THREE.BoxGeometry(0.05 * s, 0.12 * s, 0.02), 0x3a8aff, 0, ny - 0.03 * s, nz);
+      const md = M(new THREE.CylinderGeometry(0.07 * s, 0.07 * s, 0.025, 16), lam(0xffd23a, { emissive: 0x6a4a00 }), 0, ny - 0.14 * s, nz + (isBall ? 0.02 : -0.03)); md.rotation.x = Math.PI / 2; break; }
+    case 'cape':
+      if (isBall){ const t = M(new THREE.TorusGeometry(a.neckR, 0.06, 8, 24), 0xc0202a, 0, 0.12, 0); t.rotation.x = Math.PI / 2; }
+      else { const c = M(new THREE.BoxGeometry(0.56, 0.62, 0.03), 0xc0202a, 0, 0.44, 0.36); c.rotation.x = -0.18; M(new THREE.TorusGeometry(0.27, 0.035, 6, 20), 0xc0202a, 0, 0.76, 0).rotation.x = Math.PI / 2; }
+      break;
   }
   return g;
 }
-let accS = null, accB = null;
+let accS = null, accB = null, trailItem = null, trailT = 0;
 function applyCostume(){
   if (accS){ beaver.stand.remove(accS); beaver.ball.remove(accB); }
   accS = accGroup(ANCH_S); accB = accGroup(ANCH_B);
   beaver.stand.add(accS); beaver.ball.add(accB);
+  trailItem = SHOP.find(x => x.id === save.wear.trail) || null;
   const it = SHOP.find(x => x.id === save.wear.fur);
   const col = new THREE.Color(it ? it.color : FUR);
   furMats.forEach(m => m.color.copy(col));
@@ -1475,7 +1540,7 @@ function musicTick(){
 }
 
 // ---------- ui ----------
-const OVERLAYS = ['menu','levels','win','lose','shop','coll','admin','sleep'];
+const OVERLAYS = ['menu','levels','win','lose','shop','coll','admin','sleep','pause'];
 function toast(msg, ms){
   const el = $('toast'); el.innerHTML = msg; el.style.opacity = 1;
   clearTimeout(toast._t); toast._t = setTimeout(() => { el.style.opacity = 0; }, ms || 1300);
@@ -1484,7 +1549,7 @@ function show(id){ OVERLAYS.forEach(x => $(x).classList.toggle('hidden', x !== i
 function updateHud(){
   $('hLevel').textContent = mode === 'endless' ? '∞ ' + Math.floor(endless.base + Math.max(0, ball.s)) + ' m'
     : mode === 'daily' ? '🎁 Günün' : (isBoss ? '👑 ' : world.emoji + ' ') + level;
-  $('hLives').textContent = '❤️'.repeat(Math.max(0, lives)) + (lives < START_LIVES ? '🤍'.repeat(START_LIVES - lives) : '');
+  $('hLives').textContent = save.admin ? '❤️ ∞' : '❤️'.repeat(Math.max(0, lives)) + (lives < START_LIVES ? '🤍'.repeat(START_LIVES - lives) : '');
   $('hApples').textContent = '🍎 ' + apples + (mode === 'endless' ? '' : '/' + totalApples);
 }
 function updatePowHud(){
@@ -1519,6 +1584,7 @@ function beginPlay(){
   pointers.clear(); input.dragPx = 0; input.jumpBuf = 0;
   power.kind = null; power.t = 0; power.shield = false; follower = null; gScale = 1; boss.active = false; lastM = -1;
   state = 'play';
+  try { if (!history.state || !history.state.g) history.pushState({ g: 1 }, ''); } catch(e){}
   ball.wait = 0.6;
   setForm('ball'); sfx.curl();
   $('hud').classList.remove('hidden');
@@ -1604,7 +1670,8 @@ function endRun(){
   setTimeout(() => { if (state === 'lose') show('lose'); }, 500);
 }
 function loseLife(){
-  lives--; updateHud();
+  if (!save.admin) lives--;
+  updateHud();
   if (lives <= 0) return endRun();
   Object.assign(ball, { s: ball.checkpoint, lat: 0, targetLat: 0, y: R + 1.6, vy: 0, falling: false, grounded: false, invuln: 2, wait: 0.7, onMover: null });
   obstacles.forEach(o => { if (o.type === 'roller'){ o.s = o.s0; o.active = false; } });
@@ -1662,10 +1729,13 @@ function openLevels(){
   const c = grid.querySelector('.cur'); if (c) c.scrollIntoView({ block: 'center' });
 }
 function openShop(){
-  $('shopBank').textContent = '🍎 ' + save.bank;
-  const grid = $('shopGrid'); grid.innerHTML = '';
+  const free = !!save.admin;
+  $('shopBank').textContent = free ? '🍎 ∞' : '🍎 ' + save.bank;
+  const grid = $('shopGrid'), keep = grid.scrollTop; grid.innerHTML = '';
+  let lastSlot = '';
   SHOP.forEach(it => {
-    const b = document.createElement('button'), own = !!save.owned[it.id], on = save.wear[it.slot] === it.id;
+    if (it.slot !== lastSlot){ lastSlot = it.slot; const h = document.createElement('div'); h.className = 'wh'; h.style.fontSize = '18px'; h.textContent = SLOT_NAMES[it.slot]; grid.appendChild(h); }
+    const b = document.createElement('button'), own = !!save.owned[it.id] || free, on = save.wear[it.slot] === it.id;
     b.className = 'item' + (on ? ' on' : '') + (!own && save.bank < it.price ? ' poor' : '');
     b.innerHTML = '<span class="ic">' + it.icon + '</span>' + it.name + '<small>' + (own ? (on ? 'Çıkar' : 'Giy') : it.price + ' 🍎') + '</small>';
     b.addEventListener('click', () => {
@@ -1677,8 +1747,19 @@ function openShop(){
     });
     grid.appendChild(b);
   });
-  show('shop');
+  show('shop'); grid.scrollTop = keep;
 }
+// ---------- pause ----------
+let countT = 0, lastCount = 0;
+function pauseGame(){
+  if (state !== 'play' && state !== 'count') return;
+  state = 'pause'; pointers.clear(); input.dragPx = 0; input.left = input.right = false;
+  $('pauseLevelsBtn').classList.toggle('hidden', mode !== 'normal');
+  writeSave(); show('pause');
+}
+function resumeGame(){ if (state !== 'pause') return; show(null); state = 'count'; countT = 3; lastCount = 0; }
+function restartRun(){ if (mode === 'endless') startEndless(); else if (mode === 'daily') startDaily(); else startLevel(level); }
+function setMute(m){ muted = m; const t = muted ? '🔇 Ses: Kapalı' : '🔊 Ses: Açık'; $('muteBtn').textContent = t; $('pauseMuteBtn').textContent = t; }
 function openColl(){
   const st = houseStage(), nextAt = HOUSE_AT[st];
   let h = '<div class="card">✏️ Adın: <input id="nameIn" maxlength="12" placeholder="Adını yaz" value="' + esc(save.name || '') + '"></div>';
@@ -1693,7 +1774,7 @@ function openColl(){
 const LIMITS = [0, 15, 30, 45, 60, 90];
 function openAdmin(){
   rollDay();
-  $('admAll').textContent = 'Tüm leveller: ' + (save.admin ? 'AÇIK 🔓' : 'Kapalı 🔒');
+  $('admAll').textContent = 'Admin (her şey sınırsız): ' + (save.admin ? 'AÇIK 🔓' : 'Kapalı 🔒');
   $('admLimit').textContent = 'Günlük süre: ' + (save.limitMin ? save.limitMin + ' dakika' : 'Sınırsız');
   $('admInfo').textContent = 'Bugün oynanan: ' + Math.round((save.sec || 0) / 60) + ' dakika';
   show('admin');
@@ -1708,7 +1789,11 @@ document.querySelector('#menu h1').addEventListener('click', () => {
   adminTaps = adminTaps.filter(t => now - t < 3000); adminTaps.push(now);
   if (adminTaps.length >= 7){ adminTaps = []; openAdmin(); }
 });
-$('admAll').addEventListener('click', () => { save.admin = !save.admin; writeSave(); openAdmin(); });
+$('admAll').addEventListener('click', () => {
+  save.admin = !save.admin;
+  if (!save.admin){ Object.keys(save.wear).forEach(k => { if (save.wear[k] && !save.owned[save.wear[k]]) save.wear[k] = null; }); applyCostume(); }
+  writeSave(); openAdmin();
+});
 $('admLimit').addEventListener('click', () => { save.limitMin = LIMITS[(LIMITS.indexOf(save.limitMin) + 1) % LIMITS.length]; writeSave(); openAdmin(); });
 $('admReset').addEventListener('click', () => { save.sec = 0; writeSave(); openAdmin(); });
 $('admClose').addEventListener('click', goMenu);
@@ -1728,7 +1813,18 @@ $('nextBtn').addEventListener('click', () => {
 $('winLevelsBtn').addEventListener('click', () => { if (mode === 'normal') openLevels(); else goMenu(); });
 $('retryBtn').addEventListener('click', () => { if (mode === 'endless') startEndless(); else if (mode === 'daily') startDaily(); else startLevel(level, { fromFlag: true }); });
 $('loseLevelsBtn').addEventListener('click', () => { if (mode === 'normal') openLevels(); else goMenu(); });
-$('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇 Ses: Kapalı' : '🔊 Ses: Açık'; });
+$('muteBtn').addEventListener('click', () => setMute(!muted));
+$('pauseMuteBtn').addEventListener('click', () => setMute(!muted));
+$('pauseBtn').addEventListener('click', pauseGame);
+$('resumeBtn').addEventListener('click', resumeGame);
+$('restartBtn').addEventListener('click', restartRun);
+$('pauseLevelsBtn').addEventListener('click', openLevels);
+$('pauseMenuBtn').addEventListener('click', goMenu);
+document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+window.addEventListener('blur', pauseGame);
+window.addEventListener('popstate', () => {
+  if (state === 'play' || state === 'count'){ pauseGame(); try { history.pushState({ g: 1 }, ''); } catch(e){} }
+});
 
 // =====================================================================
 // fish & clouds around the (curving) track
@@ -2076,6 +2172,15 @@ function step(dt){
 
   worldAt(ball.s, ball.lat, ball.y, ballWorld);
   beaver.root.position.copy(ballWorld);
+  if (accS && accS.userData.spin){ accS.userData.spin.rotation.y += dt * 14; if (accB.userData.spin) accB.userData.spin.rotation.y += dt * 14; }
+  if (save.wear.fur === 'rainbow'){ const c = tmpCol.setHSL((time * 0.15) % 1, 0.75, 0.6); furMats.forEach(m => m.color.copy(c)); furDark.forEach(m => m.color.copy(c).multiplyScalar(0.72)); }
+  if (trailItem && state === 'play' && ball.grounded && ball.wait <= 0){
+    trailT -= dt;
+    if (trailT <= 0){ trailT = 0.045;
+      const m = new THREE.Mesh(sparkGeo, basic(trailItem.colors[Math.floor(Math.random() * trailItem.colors.length)], { transparent: true }));
+      m.position.set(ballWorld.x + (Math.random() - 0.5) * 0.4, 0.12 + Math.random() * 0.25, ballWorld.z + (Math.random() - 0.5) * 0.4); m.scale.setScalar(1.6);
+      scene.add(m); sparks.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 0.6, 2.2, (Math.random() - 0.5) * 0.6), life: 0.7 }); }
+  }
   gScale = lerp(gScale, power.kind === 'giant' && state === 'play' ? 1.7 : 1, 1 - Math.exp(-6 * dt));
   beaver.root.scale.setScalar(gScale); beaver.root.position.y += (gScale - 1) * R;
   shieldMesh.visible = power.shield && state === 'play';
@@ -2135,11 +2240,16 @@ function step(dt){
 goMenu();
 worldAt(ball.s - 3.1, 0.9, 1.45, camera.position);
 worldAt(ball.s, 0, 0.75, lookCur);
-let last = performance.now();
+let last = performance.now(), lastState = '';
 function loop(now){
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  step(dt);
+  if (state === 'count'){
+    countT -= dt; const n = Math.ceil(countT);
+    if (n !== lastCount && n > 0){ lastCount = n; toast(String(n), 700); tone(660, 660, 0.08, 'triangle', 0.08); }
+    if (countT <= 0) state = 'play';
+  } else if (state !== 'pause') step(dt);
+  if (state !== lastState){ lastState = state; $('pauseBtn').classList.toggle('hidden', state !== 'play' && state !== 'count'); }
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
