@@ -2,8 +2,16 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Kunduz Top</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5fb2ea">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Kunduz Top">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
 <style>
@@ -948,6 +956,11 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+// installable app + offline play (only works on the real site, ignored elsewhere)
+if ('serviceWorker' in navigator && location.protocol === 'https:'){
+  try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
+}
 })();
 </script>
 </body>
