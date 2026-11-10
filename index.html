@@ -329,8 +329,10 @@ function makeBeaver(){
   const tail = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), lam(0xffffff, { map: tailTex }));
   tail.scale.set(0.22, 0.045, 0.34); tail.position.set(0, 0.1, 0.48); tail.rotation.x = -0.25; stand.add(tail);
 
+  const squash = new THREE.Group();
+  root.add(squash);
   const ball = new THREE.Group();
-  root.add(ball);
+  squash.add(ball);
   ball.add(new THREE.Mesh(new THREE.SphereGeometry(R, 26, 20), lam(FUR)));
   const bb = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), lam(CREAM));
   bb.scale.set(0.3, 0.26, 0.2); bb.position.set(0, -0.12, -0.36); ball.add(bb);
@@ -344,7 +346,7 @@ function makeBeaver(){
   const btail = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), lam(0xffffff, { map: tailTex }));
   btail.scale.set(0.3, 0.05, 0.36); btail.position.set(0, 0.12, 0.47); btail.rotation.x = -1.2; ball.add(btail);
   ball.visible = false;
-  return { root, stand, ball, armL, armR };
+  return { root, stand, ball, squash, armL, armR };
 }
 const beaver = makeBeaver();
 scene.add(beaver.root);
@@ -1068,8 +1070,9 @@ function buildLevel(n){
       const wMid = (t.w0 + t.w1) / 2;
       // pad
       if (t.pad){
-        const ps = t.s0 + L * 0.5, pm = makePad(); place(pm, ps, t.pad.lat, 0); addObj(pm);
-        pads.push({ s: ps, lat: t.pad.lat, mesh: pm, cool: 0 });
+        const pk = clamp(wMid / 3, 0.6, 1);
+        const ps = t.s0 + L * 0.5, pm = makePad(); pm.scale.setScalar(pk); place(pm, ps, t.pad.lat, 0); addObj(pm);
+        pads.push({ s: ps, lat: t.pad.lat, mesh: pm, cool: 0, k: pk });
         // apples (and maybe a heart) along the high arc
         const air = 2 * PAD_V / G, dist = cfg.speed * air;
         for (let k = 1; k <= 3; k++){
@@ -1083,7 +1086,8 @@ function buildLevel(n){
       // apples
       if (!t.start && !t.finish && !t.pad && !t.blink && !t.obs && rng() < 0.45){
         const cnt = 1 + Math.floor(rng() * 3), off = (rng() - 0.5) * Math.max(0, wMid - 1);
-        for (let k = 0; k < cnt; k++) addPickup('apple', t.s0 + (k + 0.5) / cnt * t.len, off, 0.75);
+        const ak = clamp(wMid / 3, 0.7, 1);
+        for (let k = 0; k < cnt; k++) addPickup('apple', t.s0 + (k + 0.5) / cnt * t.len, off, 0.45 + 0.3 * ak, ak);
       }
     } else if (t.kind === 'mover'){
       const plat = new THREE.Mesh(G_('plat', () => new THREE.BoxGeometry(1.8, 0.4, 3)), lam(0xffcf3f));
@@ -1095,8 +1099,9 @@ function buildLevel(n){
   buildDecor(rng);
   applyWorldLook();
 }
-function addPickup(type, s, lat, y){
+function addPickup(type, s, lat, y, scale){
   const m = type === 'heart' ? makeHeart() : makeApple();
+  if (scale) m.scale.setScalar(scale);
   place(m, s, lat, y); addObj(m);
   pickups.push({ type, s, lat, y, mesh: m, taken: false, ph: Math.random() * 6 });
   if (type === 'apple') totalApples++;
@@ -1104,13 +1109,19 @@ function addPickup(type, s, lat, y){
 function addObstacle(type, t, wi, rng){
   const wMid = (t.w0 + t.w1) / 2, s = t.s0 + L * (0.4 + rng() * 0.2);
   const mesh = obstacleMesh(type, wi); addObj(mesh);
-  const o = { type, s, lat: 0, mesh, ph: rng() * 6, w: wMid, tile: t };
-  if (type === 'static'){ o.lat = wMid >= 1.9 ? (rng() < 0.5 ? -1 : 1) * (wMid/2 - 0.55) * rng() : 0; }
-  if (type === 'slider'){ o.amp = Math.max(0.3, wMid/2 - 0.45); o.freq = 1.1 + rng() * 0.8 + cfg.d; }
+  // obstacles shrink with the road: full size on a 3-wide road, down to 55 % on narrow roads
+  const k = clamp(wMid / 3, 0.55, 1);
+  mesh.scale.setScalar(k);
+  const o = { type, s, lat: 0, mesh, ph: rng() * 6, w: wMid, tile: t, k };
+  if (type === 'static'){
+    const free = wMid - 0.95 * k;               // room left beside an edge-placed obstacle
+    o.lat = free >= 1.3 ? (rng() < 0.5 ? -1 : 1) * (wMid/2 - 0.48 * k) : 0; // else centre: jump over it
+  }
+  if (type === 'slider'){ o.amp = Math.max(0.2, wMid/2 - 0.45 * k); o.freq = 1.1 + rng() * 0.8 + cfg.d; }
   if (type === 'hammer'){ o.freq = 1.6 + rng() * 0.6 + cfg.d * 0.8; }
-  if (type === 'spinner'){ o.freq = 1.6 + cfg.d * 1.4; o.half = wMid / 2 + 0.3; mesh.userData.bar.scale.x = o.half * 2; }
-  if (type === 'roller'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 1.4); o.s0 = s; o.s = o.s0; o.active = false; o.speed = 3 + cfg.d * 2; }
-  if (type === 'hopper'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 1.2); o.freq = 1.6 + rng() * 0.6; }
+  if (type === 'spinner'){ o.freq = 1.6 + cfg.d * 1.4; o.half = wMid / 2 + 0.2; mesh.userData.bar.scale.x = o.half * 2 / k; }
+  if (type === 'roller'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 1.3 * k); o.s0 = s; o.s = o.s0; o.active = false; o.speed = 3 + cfg.d * 2; }
+  if (type === 'hopper'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 0.9 * k); o.freq = 1.6 + rng() * 0.6; }
   obstacles.push(o);
 }
 const finishTex = canvasTex(256, 64, (g, w, h) => {
@@ -1176,6 +1187,7 @@ window.addEventListener('keyup', e => {
 let state = 'menu';
 const ball = { s: -1.5, lat: 0, y: R, targetLat: 0, vy: 0, rollV: 0, speed: 7.5, grounded: true, falling: false,
   coyote: 0, checkpoint: 0, invuln: 0, wait: 0, onMover: null };
+let squashT = 0, squashAmt = 0;
 let lives = START_LIVES, apples = 0, winT = 0, menuT = 0, time = 0, celebrateT = 0;
 const ballWorld = new THREE.Vector3();
 
@@ -1405,6 +1417,7 @@ function stepPlay(dt){
 
   const gr = groundAt(ball.s, ball.lat);
   if (!ball.falling && gr && ball.vy <= 0 && ball.y <= R && ball.y > R - 0.6){
+    if (!ball.grounded && ball.vy < -4){ squashT = 0.22; squashAmt = clamp(-ball.vy / 60, 0.08, 0.22); }
     ball.y = R; ball.vy = 0; ball.grounded = true; ball.coyote = 0.12;
     ball.onMover = gr.mover || null;
     if (gr.t.kind === 'road' && !gr.t.blink && !gr.t.finish) ball.checkpoint = gr.t.s0 + 0.3;
@@ -1425,7 +1438,7 @@ function stepPlay(dt){
   // trampolines
   pads.forEach(pd => {
     pd.cool = Math.max(0, pd.cool - dt);
-    if (ball.grounded && pd.cool <= 0 && Math.abs(pd.s - ball.s) < 0.7 && Math.abs(pd.lat - ball.lat) < 0.75){
+    if (ball.grounded && pd.cool <= 0 && Math.abs(pd.s - ball.s) < 0.5 * pd.k + 0.3 && Math.abs(pd.lat - ball.lat) < 0.55 * pd.k + 0.3){
       ball.vy = PAD_V; ball.grounded = false; pd.cool = 1; sfx.pad();
       pd.mesh.userData.top.scale.y = 3;
     }
@@ -1466,20 +1479,20 @@ function stepPlay(dt){
 }
 
 function obstacleHit(o){
-  const ds = Math.abs(o.s - ball.s), dl = Math.abs(o.curLat - ball.lat), y = ball.y;
+  const ds = Math.abs(o.s - ball.s), dl = Math.abs(o.curLat - ball.lat), y = ball.y, k = o.k;
   switch (o.type){
-    case 'static':  return ds < 0.75 && dl < 0.8 && y < 0.6 + R;
-    case 'slider':  return ds < 0.8 && dl < 0.85 && y < 0.75 + R;
-    case 'roller':  return ds < 0.85 && dl < 1.0 && y < 0.8 + R;
-    case 'hammer':  return ds < 0.75 && dl < 0.75 && Math.abs(y - o.headY) < 0.85;
-    case 'hopper':  return ds < 0.75 && dl < 0.8 && Math.abs(y - o.hy) < 0.85;
+    case 'static':  return ds < 0.44*k + 0.33 && dl < 0.44*k + 0.36 && y < 0.6*k + 0.45;
+    case 'slider':  return ds < 0.45*k + 0.35 && dl < 0.45*k + 0.38 && y < 0.8*k + 0.45;
+    case 'roller':  return ds < 0.45*k + 0.38 && dl < 0.65*k + 0.38 && y < 0.9*k + 0.45;
+    case 'hammer':  return ds < 0.35*k + 0.38 && dl < 0.45*k + 0.35 && Math.abs(y - o.headY) < 0.35*k + 0.45;
+    case 'hopper':  return ds < 0.42*k + 0.35 && dl < 0.42*k + 0.38 && Math.abs(y - o.hy) < 0.42*k + 0.45;
     case 'spinner': {
-      if (y > 0.42 + R + 0.1) return false;
+      if (y > 0.43*k + 0.5) return false;
       // distance from ball to the rotating bar (in track plane)
       const a = o.ang, bx = Math.cos(a), bz = -Math.sin(a);
       const px = ball.lat - 0, pz = ball.s - o.s;
       const proj = clamp(px * bx + pz * bz, -o.half, o.half);
-      return Math.hypot(px - proj * bx, pz - proj * bz) < 0.42;
+      return Math.hypot(px - proj * bx, pz - proj * bz) < 0.11*k + 0.36;
     }
   }
   return false;
@@ -1493,9 +1506,9 @@ function updateLevelObjects(dt){
     if (o.type === 'slider'){ o.curLat = Math.sin(t * o.freq + o.ph) * o.amp; place(o.mesh, o.s, o.curLat, 0); }
     else if (o.type === 'hammer'){
       const ang = Math.sin(t * o.freq + o.ph) * 1.0;
-      place(o.mesh, o.s, 0, 3.4);
+      place(o.mesh, o.s, 0, 3.4 * o.k);
       o.mesh.userData.arm.rotation.z = ang;
-      o.curLat = Math.sin(ang) * 2.5; o.headY = 3.4 - Math.cos(ang) * 2.5;
+      o.curLat = Math.sin(ang) * 2.5 * o.k; o.headY = (3.4 - Math.cos(ang) * 2.5) * o.k;
     } else if (o.type === 'spinner'){
       o.ang = t * o.freq + o.ph;
       place(o.mesh, o.s, 0, 0);
@@ -1509,7 +1522,7 @@ function updateLevelObjects(dt){
       o.mesh.userData.spin.rotation.x += o.speed * dt / 0.45 * (o.active ? 1 : 0);
       o.mesh.visible = o.s > -999;
     } else if (o.type === 'hopper'){
-      o.hy = 0.42 + 2.4 * Math.max(0, Math.sin(t * o.freq + o.ph));
+      o.hy = 0.42 * o.k + 2.2 * Math.max(0, Math.sin(t * o.freq + o.ph));
       place(o.mesh, o.s, o.lat, o.hy);
     } else if (!o.placed){ place(o.mesh, o.s, o.lat, 0); o.placed = true; }
   });
@@ -1551,14 +1564,14 @@ function step(dt){
 
   if (state === 'play'){
     stepPlay(dt);
-    beaver.root.rotation.y = lerp(beaver.root.rotation.y, -c.h, 1 - Math.exp(-10 * dt));
+    beaver.stand.rotation.y = -c.h;
   } else if (state === 'win'){
     winT += dt;
     ball.speed = Math.max(0, ball.speed - 16 * dt);
     ball.s += ball.speed * dt;
     ball.lat = lerp(ball.lat, 0, 1 - Math.exp(-3 * dt));
     beaver.root.visible = true;
-    beaver.root.rotation.y = lerp(beaver.root.rotation.y, -c.h + Math.PI, 1 - Math.exp(-5 * dt));
+    beaver.stand.rotation.y = lerp(beaver.stand.rotation.y, -c.h + Math.PI, 1 - Math.exp(-5 * dt));
     ball.y = R + Math.abs(Math.sin(winT * 6)) * 0.35 * (winT > 0.3 ? 1 : 0);
     beaver.armR.rotation.z = 2.6 + Math.sin(winT * 10) * 0.4;
     beaver.armL.rotation.z = -2.6 - Math.sin(winT * 10) * 0.4;
@@ -1569,7 +1582,7 @@ function step(dt){
   } else {
     menuT += dt;
     beaver.root.visible = true;
-    beaver.root.rotation.y = -c.h + Math.PI;
+    beaver.stand.rotation.y = -c.h + Math.PI;
     ball.y = R;
     beaver.armR.rotation.z = 2.5 + Math.sin(menuT * 6) * 0.45;
     beaver.armL.rotation.z = -0.35;
@@ -1578,6 +1591,11 @@ function step(dt){
 
   worldAt(ball.s, ball.lat, ball.y, ballWorld);
   beaver.root.position.copy(ballWorld);
+  squashT = Math.max(0, squashT - dt);
+  const sq = squashT > 0 ? Math.sin((1 - squashT / 0.22) * Math.PI) * squashAmt : 0;
+  const bob = state === 'play' && ball.grounded && ball.wait <= 0 ? Math.abs(Math.sin(ball.s * 2.2)) * 0.025 : 0;
+  beaver.squash.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
+  beaver.squash.position.y = -sq * R + bob;
 
   // shadow
   const gr = cX ? groundAt(ball.s, ball.lat) : null;
