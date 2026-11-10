@@ -58,6 +58,32 @@
   .lv small{font-size:11px;color:#b5651d;margin-top:3px;letter-spacing:1px}
   .lv.locked{background:rgba(255,255,255,.22);color:rgba(255,255,255,.7);box-shadow:none;cursor:default}
   .lv.cur{outline:4px solid #fff}
+  .lv.boss{background:#ff8fb1;color:#7a1f3a;box-shadow:0 4px 0 #c95a80}
+  .lv.boss.locked{background:rgba(255,255,255,.22);color:rgba(255,255,255,.7);box-shadow:none}
+  .row{display:flex;gap:10px}
+  .mid{font-family:inherit;font-weight:800;font-size:16px;border:none;border-radius:999px;padding:8px 6px;width:158px;
+    background:#fff;color:#2b5d8a;box-shadow:0 5px 0 #b9cfe2;cursor:pointer;white-space:nowrap}
+  .mid:active{transform:translateY(3px);box-shadow:0 2px 0 #b9cfe2}
+  #shop{justify-content:flex-end;padding:0;background:linear-gradient(rgba(25,55,100,0) 38%,rgba(25,55,100,.95) 50%)}
+  .panel{width:100%;max-width:520px;height:52%;display:flex;flex-direction:column;padding:10px 14px calc(14px + env(safe-area-inset-bottom));box-sizing:border-box}
+  .phead{display:flex;justify-content:space-between;align-items:center;font-size:22px;margin-bottom:8px}
+  #shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow-y:auto;touch-action:pan-y;flex:1;align-content:start}
+  .item{font-family:inherit;font-weight:800;font-size:15px;border:none;border-radius:14px;padding:8px;background:#fff;color:#2b5d8a;
+    display:flex;flex-direction:column;align-items:center;line-height:1.15;cursor:pointer}
+  .item .ic{font-size:28px}
+  .item small{font-size:13px;color:#b5651d}
+  .item.on{background:#ffcf3f;color:#6a4319}
+  .item.poor{opacity:.55}
+  #coll{background:rgba(25,55,100,.94);justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))}
+  #collBody{width:100%;max-width:520px;overflow-y:auto;touch-action:pan-y;flex:1;text-align:left}
+  .card{background:rgba(255,255,255,.14);border-radius:14px;padding:10px 14px;margin-bottom:10px;font-size:18px;line-height:1.3}
+  .card small{font-size:14px;opacity:.85}
+  .emo{font-size:30px;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .emo span{position:relative}
+  .emo span.off{filter:grayscale(1);opacity:.3}
+  .emo small{font-size:12px;position:absolute;right:-6px;bottom:-4px;background:#ffcf3f;color:#6a4319;border-radius:8px;padding:0 4px}
+  input{font-family:inherit;font-weight:800;font-size:18px;border:none;border-radius:10px;padding:4px 10px;width:150px;
+    user-select:text;-webkit-user-select:text;color:#2b5d8a}
 </style>
 </head>
 <body>
@@ -68,6 +94,7 @@
     <span class="pill" id="hApples">🍎 0</span>
   </div>
   <div id="bar"><div id="barFill"></div></div>
+  <span class="pill hidden" id="hPow" style="display:inline-block;margin-top:8px"></span>
 </div>
 <div id="toast"></div>
 
@@ -75,12 +102,13 @@
   <div>
     <h1>Kunduz Top</h1>
     <p class="sub" id="menuWorld"></p>
-    <p class="sub">Parmağını ekranda <b>sağa sola kaydır</b>,<br>zıplamak için ekrana <b>dokun</b>.</p>
+    <p class="sub" id="menuBank"></p>
   </div>
   <div class="btns">
     <button class="big" id="playBtn">Oyna</button>
-    <button class="big alt" id="levelsBtn">Leveller</button>
-    <button class="small" id="muteBtn">Ses: Açık</button>
+    <div class="row"><button class="mid" id="levelsBtn">🗺️ Leveller</button><button class="mid" id="dailyBtn">🎁 Günün Leveli</button></div>
+    <div class="row"><button class="mid" id="endlessBtn">∞ Sonsuz Mod</button><button class="mid" id="shopBtn">🎩 Dükkân</button></div>
+    <div class="row"><button class="mid" id="collBtn">🏆 Koleksiyon</button><button class="mid" id="muteBtn">🔊 Ses: Açık</button></div>
   </div>
 </div>
 
@@ -88,7 +116,7 @@
   <div id="levelsHead">
     <button class="small" id="levelsBack">◀ Geri</button>
     <h2 style="font-size:32px">Leveller</h2>
-    <span style="width:70px"></span>
+    <b id="levelsStars" style="width:70px;text-align:right;font-size:18px"></b>
   </div>
   <div id="grid"></div>
 </div>
@@ -104,12 +132,41 @@
 </div>
 
 <div class="overlay dim hidden" id="lose">
-  <h2>Canların bitti!</h2>
-  <div class="stats">Hiç sorun değil, bir daha dene!</div>
+  <h2 id="loseTitle">Canların bitti!</h2>
+  <div class="stats" id="loseStats">Hiç sorun değil, bir daha dene!</div>
   <div class="btns">
     <button class="big" id="retryBtn">Tekrar Dene</button>
     <button class="big alt" id="loseLevelsBtn">Leveller</button>
   </div>
+</div>
+
+<div class="overlay hidden" id="shop">
+  <div class="panel">
+    <div class="phead"><button class="small" id="shopBack">◀ Geri</button><b>🎩 Dükkân</b><b id="shopBank"></b></div>
+    <div id="shopGrid"></div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="coll">
+  <div class="phead" style="width:100%;max-width:520px"><button class="small" id="collBack">◀ Geri</button><b>🏆 Koleksiyon</b><span style="width:70px"></span></div>
+  <div id="collBody"></div>
+</div>
+
+<div class="overlay dim hidden" id="admin">
+  <h2>Ebeveyn Ayarları</h2>
+  <div class="stats" id="admInfo"></div>
+  <div class="btns">
+    <button class="big alt" id="admAll"></button>
+    <button class="big alt" id="admLimit"></button>
+    <button class="small" id="admReset">Bugünkü süreyi sıfırla</button>
+    <button class="big" id="admClose">Kapat</button>
+  </div>
+</div>
+
+<div class="overlay dim hidden" id="sleep">
+  <h2>Kunduz yoruldu 😴</h2>
+  <div class="stats">Bugünlük bu kadar yeter.<br>Yarın devam edelim!</div>
+  <button class="big" id="sleepOk">Tamam</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -125,7 +182,7 @@ const TH = 0.5;         // road thickness
 const G = 24;           // gravity
 const JUMP_V = 8.6;     // normal jump (air time ~0.72 s)
 const PAD_V = 14;       // trampoline jump
-const MAX_LEVEL = 100;
+const MAX_LEVEL = 500;
 const START_LIVES = 3, MAX_LIVES = 5;
 
 const $ = id => document.getElementById(id);
@@ -239,18 +296,20 @@ const WORLDS = [
   { name: 'Volkan', emoji: '🌋', sky: ['#2a0c0c','#6a1a10','#c0461a'], fog: 0x6a2410, hemi: [0xffd0b0, 0x602010, 0.9], sun: 0.6,
     roads: ['lavarock','stone','glass'], palette: [0x6a4a44,0x8a5a4a], ground: 0xff5a10, groundY: -16, clouds: 0, decor: 'volcano' }
 ];
-const worldOf = n => WORLDS[Math.min(9, Math.floor((n - 1) / 10))];
+const worldOf = n => WORLDS[Math.min(9, Math.floor((Math.max(1, n) - 1) / 50))];
 
 // obstacle unlock schedule (level where each type first appears)
 const OBST = [
-  { type: 'static',  from: 5,  label: 'Engellerden kaç ya da üstünden zıpla!' },
-  { type: 'slider',  from: 11, label: 'Yeni: Kayan engeller!' },
-  { type: 'hammer',  from: 21, label: 'Yeni: Sallanan çekiçler!' },
-  { type: 'roller',  from: 26, label: 'Yeni: Yuvarlanan kütükler!' },
-  { type: 'spinner', from: 31, label: 'Yeni: Dönen çubuklar! Zıpla!' },
-  { type: 'blink',   from: 41, label: 'Yeni: Kaybolan yollar!' },
-  { type: 'mover',   from: 51, label: 'Yeni: Hareketli platformlar!' },
-  { type: 'hopper',  from: 91, label: 'Dikkat: Zıplayan lav topları!' }
+  { type: 'static',  from: 5,   label: 'Engellerden kaç ya da üstünden zıpla!' },
+  { type: 'slider',  from: 15,  label: 'Yeni: Kayan engeller!' },
+  { type: 'hammer',  from: 40,  label: 'Yeni: Sallanan çekiçler!' },
+  { type: 'roller',  from: 70,  label: 'Yeni: Yuvarlanan kütükler!' },
+  { type: 'spinner', from: 100, label: 'Yeni: Dönen çubuklar! Zıpla!' },
+  { type: 'beam',    from: 120, label: 'Yeni: Dar denge köprüleri!' },
+  { type: 'blink',   from: 140, label: 'Yeni: Kaybolan yollar!' },
+  { type: 'mover',   from: 180, label: 'Yeni: Hareketli platformlar!' },
+  { type: 'wind',    from: 220, label: 'Yeni: Rüzgâr! Oklara dikkat!' },
+  { type: 'hopper',  from: 451, label: 'Dikkat: Zıplayan lav topları!' }
 ];
 
 // =====================================================================
@@ -552,13 +611,14 @@ function roadMats(style, color){
 }
 
 // ribbon geometry along the curved centerline: top (group 0) + sides & end caps (group 1)
-function ribbonGeo(sA, sB, wA, wB, thick, yTop){
+function ribbonGeo(sA, sB, wA, wB, thick, yTop, latOff){
   const steps = Math.max(2, Math.ceil((sB - sA) / 0.5));
   const P = [];
   for (let k = 0; k <= steps; k++){
     const s = lerp(sA, sB, k / steps), c = centerAt(s), w = lerp(wA, wB, k / steps);
     const rx = Math.cos(c.h), rz = Math.sin(c.h);
-    P.push({ s, lx: c.x - rx*w/2, lz: c.z - rz*w/2, rx: c.x + rx*w/2, rz: c.z + rz*w/2 });
+    const o = latOff || 0;
+    P.push({ s, lx: c.x + rx*(o - w/2), lz: c.z + rz*(o - w/2), rx: c.x + rx*(o + w/2), rz: c.z + rz*(o + w/2) });
   }
   const yt = yTop || 0, yb = yt - thick;
   const top = [], topUv = [], side = [], sideUv = [];
@@ -592,20 +652,41 @@ function ribbonGeo(sA, sB, wA, wB, thick, yTop){
   return geo;
 }
 
+let mode = 'normal', isBoss = false, flagS = 0, flagHit = false, flagApples = 0, winds = [];
+const endless = { stage: 0, base: 0, wi0: 0 };
+const POW = {
+  magnet: { icon: '🧲', t: 8, name: 'Mıknatıs' },
+  shield: { icon: '🛡️', t: 0, name: 'Kalkan' },
+  wing:   { icon: '🎈', t: 7, name: 'Balon' },
+  giant:  { icon: '⭐', t: 6, name: 'Dev Kunduz' }
+};
+const FRIENDS = ['🐥','🦔','🦀','🐬','🐐','🐱','🦎','🐧','👽','🐲'];
+const grav = () => world.decor === 'space' ? 15 : G;
+const emojiTex = {};
+function emojiSprite(e, size){
+  if (!emojiTex[e]) emojiTex[e] = canvasTex(128, 128, g => { g.font = '96px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 64, 70); });
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTex[e], transparent: true }));
+  sp.scale.set(size, size, 1);
+  return sp;
+}
+const goldMat = lam(0xffd23a, { emissive: 0x6a4a00 });
+
 function levelCfg(n){
-  const d = (n - 1) / (MAX_LEVEL - 1);
+  // difficulty rises quickly over the first 200 levels, then slowly to 500. Speed is capped (no more racing).
+  const d = clamp(0.75 * Math.min(1, (n - 1) / 200) + 0.25 * (n - 1) / 499, 0, 1);
+  const speed = 7.5 + 3.3 * d;                         // 7.5 .. 10.8
+  const dur = 28 + 42 * Math.min(1, (n - 1) / 300);    // seconds of rolling: 28 .. 70
   return {
-    d,
-    tiles: Math.round(26 + n * 0.8),             // road tiles: 27 .. 106
-    speed: 7.5 + 6.5 * d,                        // 7.5 .. 14
-    wBase: 3.2 - 1.7 * d,                        // 3.2 .. 1.5
+    d, speed,
+    tiles: Math.round(speed * dur / L),
+    wBase: 3.2 - 1.7 * d,
     wVar: 0.2 + 0.4 * d,
-    tol: lerp(0.32, 0.03, d),                    // edge forgiveness (falls off easier later)
-    gapP: n < 3 ? 0 : 0.08 + 0.08 * d,
-    gapLen: 1.4 + 1.4 * d,                       // max ~2.8 units, air jump covers 5.4 .. 10
-    obsP: n < 5 ? 0 : 0.07 + 0.22 * d,
-    padP: n < 3 ? 0 : 0.045 + 0.03 * d,
-    turnMax: 0.6 + 0.6 * d                       // radians per turn
+    tol: lerp(0.32, 0.05, d),
+    gapP: n < 3 ? 0 : 0.08 + 0.07 * d,
+    gapLen: 1.4 + 1.2 * d,
+    obsP: n < 5 ? 0 : 0.08 + 0.22 * d,
+    padP: n < 3 ? 0 : 0.04 + 0.02 * d,
+    turnMax: 0.6 + 0.6 * d
   };
 }
 
@@ -945,6 +1026,7 @@ function applyWorldLook(){
   embers.visible = w.decor === 'volcano';
   scene.fog.near = w.decor === 'space' ? 60 : 40;
   scene.fog.far = w.decor === 'space' ? 160 : 115;
+  camera.far = w.decor === 'space' ? 230 : 140; camera.updateProjectionMatrix();
 }
 
 // =====================================================================
@@ -952,21 +1034,29 @@ function applyWorldLook(){
 // =====================================================================
 function clearLevel(){
   levelObjs.forEach(o => { scene.remove(o); if (o.userData.ownGeo) o.geometry.dispose(); });
-  levelObjs = []; obstacles = []; pads = []; pickups = []; blinkTiles = []; movers = []; decorAnims = [];
+  levelObjs = []; obstacles = []; pads = []; pickups = []; blinkTiles = []; movers = []; decorAnims = []; winds = [];
 }
 function addObj(o){ scene.add(o); levelObjs.push(o); return o; }
 
-function buildLevel(n){
+function buildLevel(n, opt){
+  opt = opt || {};
   clearLevel();
-  level = n; cfg = levelCfg(n); world = worldOf(n);
+  level = n;
+  const cn = opt.cfgN || n;
+  cfg = levelCfg(cn);
+  if (opt.tiles) cfg.tiles = opt.tiles;
+  world = opt.wi != null ? WORLDS[opt.wi] : worldOf(n);
+  isBoss = !!opt.boss; flagS = 0;
   const wi = WORLDS.indexOf(world);
-  const rng = mulberry32(n * 7919 + 13);
-  const unlocked = OBST.filter(o => n >= o.from).map(o => o.type);
+  const rng = mulberry32(opt.seed || (n * 7919 + 13));
+  const unlocked = OBST.filter(o => cn >= o.from).map(o => o.type);
+  const has = x => unlocked.includes(x);
 
   // ---- 1. tile list (track space) ----
   tiles = [];
   let s = -4 * L, h = 0, w = 3.4, roadCount = 0, straightLeft = 4, turnLeft = 0, turnStep = 0;
   let styleIdx = 0, styleLeft = 6, sinceGap = 0, sinceObs = 0, safe = 0, colorK = 0;
+  let beamLeft = 0, windLeft = 0, windDir = 1, sideCount = 0;
   const startRoad = (len, w0, w1, h0, h1, extra) => {
     const t = Object.assign({ kind: 'road', s0: s, len, w0, w1, h0, h1, style: world.roads[styleIdx], color: world.palette[colorK++ % world.palette.length] }, extra || {});
     tiles.push(t); s += len; return t;
@@ -975,16 +1065,17 @@ function buildLevel(n){
   let lastWasGap = false;
   while (roadCount < cfg.tiles){
     const p = roadCount / cfg.tiles;
-    // road style runs
     if (--styleLeft <= 0){ styleIdx = (styleIdx + 1 + Math.floor(rng() * (world.roads.length - 1))) % world.roads.length; styleLeft = 5 + Math.floor(rng() * 6); }
     const style = world.roads[styleIdx];
-    // width: narrows with level and within the level; highway is a wide "otoban"
     let wt = clamp(cfg.wBase * lerp(1.08, 0.85, p) + (rng()-0.5) * cfg.wVar * 2, 1.25, 3.4);
     if (style === 'highway') wt += 1.4;
     if (lastWasGap) wt = Math.max(wt, 2.0);
+    let beam = false;
+    if (beamLeft > 0){ wt = 1.05; beamLeft--; beam = true; }
     // heading: straight runs and real left/right turns
     const h0 = h;
-    if (turnLeft > 0){ h += turnStep; turnLeft--; if (turnLeft === 0) straightLeft = 2 + Math.floor(rng() * 4); }
+    if (beam){ /* balance beams are always straight */ }
+    else if (turnLeft > 0){ h += turnStep; turnLeft--; if (turnLeft === 0) straightLeft = 2 + Math.floor(rng() * 4); }
     else if (straightLeft > 0) straightLeft--;
     else {
       let dir = rng() < 0.5 ? -1 : 1;
@@ -996,12 +1087,12 @@ function buildLevel(n){
     h = clamp(h, -1.3, 1.3);
     const straight = Math.abs(h - h0) < 1e-6 && turnLeft === 0;
 
-    // gaps (short and fair), sometimes with a moving platform in the middle
-    if (straight && roadCount > 6 && p < 0.93 && sinceGap > 3 && safe <= 0 && !lastWasGap && rng() < cfg.gapP){
+    // gaps (short and fair, never right after an obstacle), sometimes with a moving platform
+    if (!beam && beamLeft <= 0 && windLeft <= 0 && straight && roadCount > 6 && p < 0.93 && sinceGap > 3 && sinceObs > 1 && safe <= 0 && !lastWasGap && rng() < cfg.gapP){
       tiles[tiles.length - 1].hazardEnd = true;
-      if (unlocked.includes('mover') && rng() < 0.35){
+      if (has('mover') && rng() < 0.35){
         const g1 = 1.2 + rng() * 0.5, g2 = 1.2 + rng() * 0.5;
-        const t = { kind: 'mover', s0: s, len: g1 + 3 + g2, g1, w0: w, w1: w, h0: h, h1: h, amp: 0.6 + 0.6 * cfg.d, ph: rng() * 6, freq: 1.2 + rng() * 0.6 };
+        const t = { kind: 'mover', s0: s, len: g1 + 3 + g2, g1, w0: w, w1: w, h0: h, h1: h, amp: 0.3 + 0.3 * cfg.d, ph: rng() * 6, freq: 1.0 + rng() * 0.5 };
         tiles.push(t); s += t.len;
       } else {
         const gl = cfg.gapLen * (0.75 + rng() * 0.25);
@@ -1011,22 +1102,35 @@ function buildLevel(n){
       continue;
     }
     const t = startRoad(L, w, wt, h0, h, {});
-    t.style = style; t.afterGap = lastWasGap;
+    t.style = beam ? 'wood' : style; t.afterGap = lastWasGap; t.beam = beam;
     w = wt; roadCount++; sinceGap++; sinceObs++; safe--;
     lastWasGap = false;
+    if (beam){ sinceObs = 0; continue; }
+    const plain = straight && !t.afterGap && safe <= 0 && roadCount > 6 && p < 0.9;
 
     // blinking tile
-    if (unlocked.includes('blink') && straight && !t.afterGap && safe <= 0 && sinceObs > 1 && rng() < 0.05 + 0.08 * cfg.d){
-      t.blink = true; t.ph = rng(); sinceObs = 0; continue;
+    if (has('blink') && plain && sinceObs > 1 && sinceGap > 3 && rng() < 0.05 + 0.08 * cfg.d){
+      t.blink = true; t.ph = rng(); sinceObs = 0; sinceGap = 0; continue;
     }
-    // trampoline (+ rare heart above its arc)
+    // narrow balance beam on the next two tiles
+    if (has('beam') && plain && windLeft <= 0 && sinceObs > 1 && sinceGap > 2 && rng() < 0.03 + 0.04 * cfg.d){
+      beamLeft = 2; turnLeft = 0; straightLeft = Math.max(straightLeft, 3); sinceObs = 0; continue;
+    }
+    // side wind over two tiles
+    if (has('wind') && plain && windLeft <= 0 && rng() < 0.04 + 0.04 * cfg.d){ windLeft = 2; windDir = rng() < 0.5 ? -1 : 1; }
+    if (windLeft > 0){ t.wind = windDir; windLeft--; sinceObs = 0; continue; }
+    // trampoline
     if (cfg.padP > 0 && roadCount > 5 && p < 0.85 && safe <= 0 && !t.afterGap && rng() < cfg.padP){
       t.pad = { u: 0.5, lat: (rng() - 0.5) * Math.max(0, wt - 1.2) * 0.6 };
       safe = 6; sinceObs = 0;
       continue;
     }
+    // secret side platform with a golden apple
+    if (cn >= 20 && plain && sideCount < 2 && sinceObs > 1 && rng() < 0.035){
+      t.side = { dir: rng() < 0.5 ? -1 : 1, w: 1.15 }; sideCount++; sinceObs = 0; continue;
+    }
     // obstacles
-    const pool = unlocked.filter(x => x !== 'blink' && x !== 'mover' && !(x === 'hopper' && wi !== 9));
+    const pool = unlocked.filter(x => !['blink','mover','beam','wind'].includes(x) && !(x === 'hopper' && wi !== 9));
     if (pool.length && roadCount > 6 && safe <= 0 && !t.afterGap && sinceObs > 1 && rng() < cfg.obsP){
       const newest = pool[pool.length - 1];
       t.obs = rng() < 0.35 ? newest : pool[Math.floor(rng() * pool.length)];
@@ -1040,7 +1144,7 @@ function buildLevel(n){
   // ---- 2. sample the centerline ----
   const N = Math.ceil((sMax - sMin) / DS) + 2;
   cX = new Float32Array(N); cZ = new Float32Array(N); cH = new Float32Array(N);
-  let x = 0, z = -sMin, ti = 0; // so that s = 0 maps near z = 0
+  let x = 0, z = -sMin, ti = 0;
   for (let k = 0; k < N; k++){
     const ss = sMin + k * DS;
     while (ti < tiles.length - 1 && ss >= tiles[ti].s0 + tiles[ti].len) ti++;
@@ -1049,13 +1153,30 @@ function buildLevel(n){
     cX[k] = x; cZ[k] = z; cH[k] = hh;
     x += Math.sin(hh) * DS; z -= Math.cos(hh) * DS;
   }
-  // shift so s = 0 is at the origin
   const c0 = centerAt(0); for (let k = 0; k < N; k++){ cX[k] -= c0.x; cZ[k] -= c0.z; }
 
-  // ---- 3. meshes ----
+  // ---- 3. special spots on plain tiles: checkpoint flag, power-ups, a friend to rescue ----
+  const cand = tiles.filter(t => t.kind === 'road' && !t.start && !t.finish && !t.blink && !t.pad && !t.obs && !t.side && !t.wind && !t.beam && !t.afterGap && !t.hazardEnd && t.s0 > 30);
+  const takeNear = frac => {
+    if (!cand.length) return null;
+    let best = 0, bd = 1e9;
+    cand.forEach((t, i) => { const dd = Math.abs(t.s0 - finishS * frac); if (dd < bd){ bd = dd; best = i; } });
+    return cand.splice(best, 1)[0];
+  };
+  if (opt.flag && cfg.tiles >= 60){ const t = takeNear(0.5); if (t){ t.flag = true; flagS = t.s0 + 2; } }
+  if (opt.friend){ const t = takeNear(0.3 + rng() * 0.4); if (t) t.friend = FRIENDS[wi]; }
+  if (cn >= 10){
+    let cnt = (rng() < 0.6 ? 1 : 0) + (cn > 100 && rng() < 0.4 ? 1 : 0);
+    if (isBoss) cnt = Math.max(cnt, 1);
+    const kinds = Object.keys(POW);
+    for (let k = 0; k < cnt; k++){ const t = takeNear(0.15 + rng() * 0.65); if (t) t.pow = kinds[Math.floor(rng() * kinds.length)]; }
+  }
+
+  // ---- 4. meshes ----
   totalApples = 0;
   let firstHeart = n % 3 === 0;
-  tiles.forEach((t, idx) => {
+  const firstFinish = tiles.find(q => q.finish);
+  tiles.forEach(t => {
     if (t.kind === 'road'){
       const geo = ribbonGeo(t.s0, t.s0 + t.len, t.w0, t.w1, TH);
       const mats = roadMats(t.style, t.color);
@@ -1066,25 +1187,44 @@ function buildLevel(n){
         const hz = new THREE.Mesh(ribbonGeo(t.s0 + t.len - 1.2, t.s0 + t.len, lerp(t.w0, t.w1, 0.7), t.w1, 0.02, 0.012), [hazardMat, hazardMat]);
         hz.userData.ownGeo = true; addObj(hz);
       }
-      if (t.finish && t === tiles.find(q => q.finish)) buildFinishArch(t);
-      const wMid = (t.w0 + t.w1) / 2;
-      // pad
+      if (t === firstFinish) buildFinishArch(t);
+      const wMid = (t.w0 + t.w1) / 2, sMid = t.s0 + t.len / 2;
+      if (t.wind){
+        const g = new THREE.Group();
+        for (let k = 0; k < 3; k++){
+          const a = new THREE.Mesh(G_('warrow', () => new THREE.ConeGeometry(0.18, 0.7, 6)), dm('warrow', () => basic(0xffffff, { transparent: true, opacity: 0.75 })));
+          a.rotation.z = -t.wind * Math.PI / 2; a.position.set(0, 0.6, (k - 1) * 1.2); g.add(a);
+        }
+        place(g, sMid, 0, 0); addObj(g);
+        winds.push({ g, dir: t.wind, width: wMid + 1.5 });
+      }
+      if (t.side){
+        t.side.lat = t.side.dir * (Math.max(t.w0, t.w1) / 2 + 0.5 + t.side.w / 2);
+        const sm = new THREE.Mesh(ribbonGeo(t.s0 + 0.4, t.s0 + t.len - 0.4, t.side.w, t.side.w, 0.3, 0, t.side.lat), roadMats('candy', 0xffd23a));
+        sm.userData.ownGeo = true; addObj(sm);
+        addPickup('gold', sMid, t.side.lat, 0.8);
+      }
+      if (t.flag){
+        const fg = new THREE.Group();
+        const pole = new THREE.Mesh(G_('fgpole', () => new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8)), dm('white', () => lam(0xffffff))); pole.position.y = 1.1; fg.add(pole);
+        const cloth = new THREE.Mesh(G_('fgcloth', () => new THREE.BoxGeometry(0.7, 0.45, 0.04)), dm('fgcloth', () => lam(0xff3a4a))); cloth.position.set(0.38, 1.9, 0); fg.add(cloth);
+        place(fg, flagS, -(wMid / 2 + 0.2), 0); addObj(fg);
+      }
+      if (t.pow) addPickup('pow', sMid, 0, 0.9, null, t.pow);
+      if (t.friend) addPickup('friend', sMid, 0, 0.8, null, t.friend);
       if (t.pad){
         const pk = clamp(wMid / 3, 0.6, 1);
         const ps = t.s0 + L * 0.5, pm = makePad(); pm.scale.setScalar(pk); place(pm, ps, t.pad.lat, 0); addObj(pm);
         pads.push({ s: ps, lat: t.pad.lat, mesh: pm, cool: 0, k: pk });
-        // apples (and maybe a heart) along the high arc
-        const air = 2 * PAD_V / G, dist = cfg.speed * air;
+        const air = 2 * PAD_V / grav(), dist = cfg.speed * air;
         for (let k = 1; k <= 3; k++){
-          const u = k / 4, ys = R + PAD_V * (u*air) - 0.5 * G * (u*air) * (u*air);
-          addPickup(firstHeart && k === 2 && roadCount > 0 ? 'heart' : 'apple', ps + dist * u, t.pad.lat, ys);
+          const u = k / 4, ys = R + PAD_V * (u*air) - 0.5 * grav() * (u*air) * (u*air);
+          addPickup(firstHeart && k === 2 ? 'heart' : 'apple', ps + dist * u, t.pad.lat, ys);
           if (firstHeart && k === 2) firstHeart = false;
         }
       }
-      // obstacle
       if (t.obs) addObstacle(t.obs, t, wi, rng);
-      // apples
-      if (!t.start && !t.finish && !t.pad && !t.blink && !t.obs && rng() < 0.45){
+      if (!t.start && !t.finish && !t.pad && !t.blink && !t.obs && !t.side && !t.pow && !t.friend && !t.beam && rng() < (isBoss ? 0.85 : 0.45)){
         const cnt = 1 + Math.floor(rng() * 3), off = (rng() - 0.5) * Math.max(0, wMid - 1);
         const ak = clamp(wMid / 3, 0.7, 1);
         for (let k = 0; k < cnt; k++) addPickup('apple', t.s0 + (k + 0.5) / cnt * t.len, off, 0.45 + 0.3 * ak, ak);
@@ -1099,11 +1239,15 @@ function buildLevel(n){
   buildDecor(rng);
   applyWorldLook();
 }
-function addPickup(type, s, lat, y, scale){
-  const m = type === 'heart' ? makeHeart() : makeApple();
+function addPickup(type, s, lat, y, scale, kind){
+  let m;
+  if (type === 'heart') m = makeHeart();
+  else if (type === 'pow') m = emojiSprite(POW[kind].icon, 0.95);
+  else if (type === 'friend') m = emojiSprite(kind, 0.95);
+  else { m = makeApple(); if (type === 'gold'){ m.children[0].material = goldMat; m.scale.setScalar(1.4); } }
   if (scale) m.scale.setScalar(scale);
   place(m, s, lat, y); addObj(m);
-  pickups.push({ type, s, lat, y, mesh: m, taken: false, ph: Math.random() * 6 });
+  pickups.push({ type, kind, s, lat, y, mesh: m, taken: false, ph: Math.random() * 6 });
   if (type === 'apple') totalApples++;
 }
 function addObstacle(type, t, wi, rng){
@@ -1119,7 +1263,7 @@ function addObstacle(type, t, wi, rng){
   }
   if (type === 'slider'){ o.amp = Math.max(0.2, wMid/2 - 0.45 * k); o.freq = 1.1 + rng() * 0.8 + cfg.d; }
   if (type === 'hammer'){ o.freq = 1.6 + rng() * 0.6 + cfg.d * 0.8; }
-  if (type === 'spinner'){ o.freq = 1.6 + cfg.d * 1.4; o.half = wMid / 2 + 0.2; mesh.userData.bar.scale.x = o.half * 2 / k; }
+  if (type === 'spinner'){ o.freq = 1.6 + cfg.d * 1.4; o.half = Math.min(wMid / 2 + 0.2, 1.15); mesh.userData.bar.scale.x = o.half * 2 / k; }
   if (type === 'roller'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 1.3 * k); o.s0 = s; o.s = o.s0; o.active = false; o.speed = 3 + cfg.d * 2; }
   if (type === 'hopper'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 0.9 * k); o.freq = 1.6 + rng() * 0.6; }
   obstacles.push(o);
@@ -1170,6 +1314,7 @@ window.addEventListener('pointercancel', e => endPointer(e, true));
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('touchmove', e => { if (inGame()) e.preventDefault(); }, { passive: false });
 window.addEventListener('keydown', e => {
+  if (!inGame()) return;
   const k = e.key;
   if (k === 'ArrowLeft' || k === 'a' || k === 'A') input.left = true;
   if (k === 'ArrowRight' || k === 'd' || k === 'D') input.right = true;
@@ -1188,18 +1333,164 @@ let state = 'menu';
 const ball = { s: -1.5, lat: 0, y: R, targetLat: 0, vy: 0, rollV: 0, speed: 7.5, grounded: true, falling: false,
   coyote: 0, checkpoint: 0, invuln: 0, wait: 0, onMover: null };
 let squashT = 0, squashAmt = 0;
-let lives = START_LIVES, apples = 0, winT = 0, menuT = 0, time = 0, celebrateT = 0;
+let lives = START_LIVES, apples = 0, winT = 0, menuT = 0, time = 0, celebrateT = 0, secAcc = 0, gScale = 1, lastHudPow = '', lastM = -1;
 const ballWorld = new THREE.Vector3();
+const power = { kind: null, t: 0, shield: false };
+const boss = { active: false, s: 0, mesh: null };
+let follower = null;
 
+// ---------- save helpers ----------
+save.stars = save.stars || {}; save.owned = save.owned || {}; save.wear = save.wear || {}; save.badges = save.badges || {};
+save.friends = save.friends || {}; save.bank = save.bank || 0; save.total = save.total || 0; save.limitMin = save.limitMin || 0;
+const esc = s => String(s).replace(/[<>&"]/g, '');
+const dateStr = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
+function bankAdd(k){ save.bank += k; save.total += k; }
+const totalStars = () => Object.values(save.stars).reduce((a, b) => a + (b || 0), 0);
+const worldIdx = n => Math.min(9, Math.floor((n - 1) / 50));
+const needStars = n => worldIdx(n) * 90;
+const canPlay = n => !!save.admin || (n <= save.unlocked && totalStars() >= needStars(n));
+function rollDay(){ const t = dateStr(); if (save.day !== t){ save.day = t; save.sec = 0; } }
+function limitHit(){ rollDay(); return save.limitMin > 0 && (save.sec || 0) >= save.limitMin * 60; }
+
+// ---------- costumes ----------
+const SHOP = [
+  { id: 'party', slot: 'hat',  name: 'Parti şapkası', icon: '🥳', price: 60 },
+  { id: 'cap',   slot: 'hat',  name: 'Kasket',        icon: '🧢', price: 150 },
+  { id: 'crown', slot: 'hat',  name: 'Taç',           icon: '👑', price: 400 },
+  { id: 'sun',   slot: 'face', name: 'Gözlük',        icon: '🕶️', price: 120 },
+  { id: 'bow',   slot: 'neck', name: 'Papyon',        icon: '🎀', price: 90 },
+  { id: 'scarf', slot: 'neck', name: 'Atkı',          icon: '🧣', price: 200 },
+  { id: 'gold',  slot: 'fur',  name: 'Altın kürk',    icon: '✨', price: 300, color: 0xe0a030 },
+  { id: 'pink',  slot: 'fur',  name: 'Pembe kürk',    icon: '🌸', price: 250, color: 0xf08ab0 },
+  { id: 'white', slot: 'fur',  name: 'Kar kürk',      icon: '❄️', price: 350, color: 0xf2efe8 },
+  { id: 'blue',  slot: 'fur',  name: 'Mavi kürk',     icon: '💙', price: 300, color: 0x5a9ae0 }
+];
+const furMats = [], furDark = [];
+beaver.root.traverse(o => {
+  if (!o.isMesh) return;
+  (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+    if (!m.color) return;
+    if (m.color.getHex() === FUR) furMats.push(m); else if (m.color.getHex() === FUR_DARK) furDark.push(m);
+  });
+});
+const ANCH_S = { top: [0, 1.25, 0], eyeY: 1.06, eyeZ: -0.31, eyeDX: 0.115, neckY: 0.74, neckZ: -0.27, neckR: 0.27, s: 1 };
+const ANCH_B = { top: [0, 0.47, -0.08], eyeY: 0.188, eyeZ: -0.48, eyeDX: 0.098, neckY: -0.12, neckZ: -0.5, neckR: 0.51, s: 0.9 };
+function accGroup(a){
+  const g = new THREE.Group(), w = save.wear, s = a.s;
+  const hat = new THREE.Group(); hat.position.set(a.top[0], a.top[1], a.top[2]); hat.scale.setScalar(s); g.add(hat);
+  if (w.hat === 'party'){
+    const c = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.36, 14), lam(0xff5ab0)); c.position.y = 0.16; hat.add(c);
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), lam(0xffe14a)); p.position.y = 0.35; hat.add(p);
+  } else if (w.hat === 'cap'){
+    const c = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), lam(0xe8333a)); c.position.y = -0.06; hat.add(c);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 0.2), lam(0xc0202a)); b.position.set(0, -0.04, -0.28); hat.add(b);
+  } else if (w.hat === 'crown'){
+    const gm = lam(0xffd23a, { emissive: 0x6a4a00 });
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 14), gm); c.position.y = 0.04; hat.add(c);
+    for (let k = 0; k < 5; k++){ const t = new THREE.Mesh(new THREE.ConeGeometry(0.045, 0.12, 6), gm); const an = k / 5 * Math.PI * 2; t.position.set(Math.cos(an) * 0.14, 0.14, Math.sin(an) * 0.14); hat.add(t); }
+  }
+  if (w.face === 'sun'){
+    const bm = lam(0x111111);
+    [-1, 1].forEach(sd => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.095 * s, 12, 10), bm); l.scale.z = 0.35; l.position.set(sd * a.eyeDX, a.eyeY, a.eyeZ); g.add(l); });
+    const br = new THREE.Mesh(new THREE.BoxGeometry(0.1 * s, 0.025, 0.02), bm); br.position.set(0, a.eyeY + 0.01, a.eyeZ); g.add(br);
+  }
+  if (w.neck === 'bow'){
+    const rm = lam(0xff3a6a);
+    [-1, 1].forEach(sd => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.07 * s, 0.14 * s, 8), rm); c.rotation.z = sd * Math.PI / 2; c.position.set(sd * 0.075 * s, a.neckY, a.neckZ); g.add(c); });
+    const k = new THREE.Mesh(new THREE.SphereGeometry(0.035 * s, 8, 6), rm); k.position.set(0, a.neckY, a.neckZ); g.add(k);
+  } else if (w.neck === 'scarf'){
+    const t = new THREE.Mesh(new THREE.TorusGeometry(a.neckR, 0.055, 8, 24), lam(0x3a8aff)); t.rotation.x = Math.PI / 2; t.position.y = a.neckY + (a === ANCH_B ? 0.1 : 0.02); g.add(t);
+  }
+  return g;
+}
+let accS = null, accB = null;
+function applyCostume(){
+  if (accS){ beaver.stand.remove(accS); beaver.ball.remove(accB); }
+  accS = accGroup(ANCH_S); accB = accGroup(ANCH_B);
+  beaver.stand.add(accS); beaver.ball.add(accB);
+  const it = SHOP.find(x => x.id === save.wear.fur);
+  const col = new THREE.Color(it ? it.color : FUR);
+  furMats.forEach(m => m.color.copy(col));
+  furDark.forEach(m => m.color.copy(col).multiplyScalar(0.72));
+}
+applyCostume();
+const shieldMesh = new THREE.Mesh(new THREE.SphereGeometry(0.72, 18, 14), basic(0x7cd8ff, { transparent: true, opacity: 0.3, depthWrite: false }));
+shieldMesh.visible = false; beaver.root.add(shieldMesh);
+
+// ---------- the beaver's house (grows with all apples ever collected) ----------
+const HOUSE_AT = [0, 50, 150, 400, 1000, 2500, 5000];
+function houseStage(){ let st = 1; HOUSE_AT.forEach((v, i) => { if (save.total >= v) st = i + 1; }); return st; }
+function houseGroup(st){
+  const g = island(0x6fcf5a, 2.3);
+  const log = (x, y, z, len, upright) => {
+    const m = new THREE.Mesh(G_('hlog', () => new THREE.CylinderGeometry(0.12, 0.12, 1, 8)), dm('hlog', () => lam(0x9a6a3a)));
+    m.scale.y = len; m.position.set(x, y, z); if (!upright) m.rotation.z = Math.PI / 2; g.add(m);
+  };
+  log(1.3, 0.37, 0.9, 0.9); log(1.3, 0.37, 1.15, 0.9); log(1.3, 0.58, 1.02, 0.9);
+  if (st >= 2) for (let k = 0; k < 6; k++) log(-1.5 + k * 0.28, 0.5, -1.3, 0.55 + (k % 2) * 0.12, true);
+  if (st >= 3){ const d = new THREE.Mesh(G_('hdome', () => new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2)), dm('hdome', () => lam(0x8a5a2e))); d.position.set(-0.2, 0.25, 0); g.add(d); }
+  if (st >= 4){
+    const door = new THREE.Mesh(G_('hdoor', () => new THREE.BoxGeometry(0.4, 0.55, 0.08)), dm('hdoor', () => lam(0x4a2a14))); door.position.set(-0.2, 0.5, 0.97); g.add(door);
+    const win = new THREE.Mesh(G_('hwin', () => new THREE.SphereGeometry(0.14, 10, 8)), dm('lamp', () => basic(0xffe060))); win.position.set(0.4, 0.75, 0.78); g.add(win);
+  }
+  if (st >= 5){
+    const ch = new THREE.Mesh(G_('hch', () => new THREE.BoxGeometry(0.22, 0.5, 0.22)), dm('hch', () => lam(0xb0483a))); ch.position.set(0.25, 1.25, -0.2); g.add(ch);
+    const pole = new THREE.Mesh(G_('fgpole', () => new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8)), dm('white', () => lam(0xffffff))); pole.scale.setScalar(0.6); pole.position.set(-0.9, 1.4, 0.2); g.add(pole);
+    const fl = new THREE.Mesh(G_('fgcloth', () => new THREE.BoxGeometry(0.7, 0.45, 0.04)), dm('fgcloth', () => lam(0xff3a4a))); fl.scale.setScalar(0.6); fl.position.set(-0.68, 1.9, 0.2); g.add(fl);
+  }
+  if (st >= 6) for (let k = 0; k < 5; k++){ const f = flower([0xff8fb1, 0xffffff, 0xc5a0ff, 0xff6a6a, 0xffd23a][k]); f.position.set(-1.6 + k * 0.5, 0.25, 1.5); f.scale.setScalar(0.8); g.add(f); }
+  if (st >= 7){ const sg = new THREE.Mesh(G_('hstar', () => new THREE.OctahedronGeometry(0.25)), goldMat); sg.position.set(-0.2, 1.6, 0); g.add(sg); }
+  return g;
+}
+
+// ---------- music (simple generated melody per world) ----------
+const MUSIC = [
+  [262, [0,2,4,7,9], 104], [220, [0,2,4,7,9], 96], [294, [0,2,4,7,9], 112], [247, [0,2,5,7,9], 100], [196, [0,2,4,7,9], 92],
+  [233, [0,3,5,7,10], 116], [208, [0,1,4,5,7], 98], [262, [0,2,4,7,11], 90], [175, [0,3,5,7,10], 88], [165, [0,3,5,7,10], 120]
+];
+let musT = 0, musI = 0, musPat = null, musWi = -1;
+function musNote(f, t, dur, type, vol){
+  try {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + 0.03);
+  } catch(e){}
+}
+function musicTick(){
+  if (!actx || muted || state !== 'play'){ musT = 0; return; }
+  const wi = WORLDS.indexOf(world), M = MUSIC[wi];
+  if (musWi !== wi || !musPat){
+    musWi = wi; musPat = []; const r = mulberry32(wi * 97 + 5); let d = 2;
+    for (let k = 0; k < 32; k++){ d = clamp(d + Math.floor(r() * 5) - 2, 0, 7); musPat.push(r() < 0.72 ? d : -1); }
+  }
+  const stepDur = 60 / M[2] / 2;
+  if (musT < actx.currentTime) musT = actx.currentTime + 0.05;
+  while (musT < actx.currentTime + 0.25){
+    const d = musPat[musI % 32];
+    if (d >= 0) musNote(M[0] * Math.pow(2, (M[1][d % 5] + 12 * Math.floor(d / 5)) / 12), musT, stepDur * 0.9, 'triangle', 0.04);
+    if (musI % 8 === 0) musNote(M[0] / 2 * Math.pow(2, M[1][[0, 3, 0, 2][(musI / 8) % 4]] / 12), musT, stepDur * 3.5, 'sine', 0.05);
+    musI++; musT += stepDur;
+  }
+}
+
+// ---------- ui ----------
+const OVERLAYS = ['menu','levels','win','lose','shop','coll','admin','sleep'];
 function toast(msg, ms){
   const el = $('toast'); el.innerHTML = msg; el.style.opacity = 1;
   clearTimeout(toast._t); toast._t = setTimeout(() => { el.style.opacity = 0; }, ms || 1300);
 }
-function show(id){ ['menu','levels','win','lose'].forEach(x => $(x).classList.toggle('hidden', x !== id)); }
+function show(id){ OVERLAYS.forEach(x => $(x).classList.toggle('hidden', x !== id)); }
 function updateHud(){
-  $('hLevel').textContent = world.emoji + ' ' + level;
+  $('hLevel').textContent = mode === 'endless' ? '∞ ' + Math.floor(endless.base + Math.max(0, ball.s)) + ' m'
+    : mode === 'daily' ? '🎁 Günün' : (isBoss ? '👑 ' : world.emoji + ' ') + level;
   $('hLives').textContent = '❤️'.repeat(Math.max(0, lives)) + (lives < START_LIVES ? '🤍'.repeat(START_LIVES - lives) : '');
-  $('hApples').textContent = '🍎 ' + apples + '/' + totalApples;
+  $('hApples').textContent = '🍎 ' + apples + (mode === 'endless' ? '' : '/' + totalApples);
+}
+function updatePowHud(){
+  const s = (boss.active ? '😈 ' + Math.max(0, Math.round(ball.s - boss.s - 2.6)) + ' m  ' : '') + (power.kind ? POW[power.kind].icon + ' ' + Math.ceil(power.t) : '') + (power.shield ? ' 🛡️' : '');
+  if (s === lastHudPow) return;
+  lastHudPow = s; $('hPow').textContent = s; $('hPow').classList.toggle('hidden', !s);
 }
 function placeAtStart(){
   Object.assign(ball, { s: -1.5, lat: 0, y: R, targetLat: 0, vy: 0, rollV: 0, speed: cfg.speed, grounded: true,
@@ -1210,91 +1501,234 @@ function placeAtStart(){
   clouds.forEach(c => placeCloud(c, false));
 }
 function goMenu(){
-  state = 'menu';
+  state = 'menu'; mode = 'normal';
   const n = Math.min(save.unlocked, MAX_LEVEL);
   buildLevel(n); placeAtStart();
+  boss.active = false; follower = null; power.kind = null; power.shield = false; gScale = 1;
+  const hg = houseGroup(houseStage()); place(hg, 8, -3.6, -0.2); hg.rotation.y += 0.6; hg.scale.setScalar(0.6); addObj(hg);
   $('playBtn').textContent = 'Oyna – Level ' + n;
   $('menuWorld').textContent = world.emoji + ' ' + world.name + ' Dünyası';
+  $('menuBank').textContent = '🍎 ' + save.bank + '   ⭐ ' + totalStars();
+  $('dailyBtn').textContent = save.dailyDone === dateStr() ? '🎁 Günün Leveli ✓' : '🎁 Günün Leveli';
   $('hud').classList.add('hidden');
   show('menu');
 }
-function startLevel(n){
-  initAudio();
-  buildLevel(n); placeAtStart();
-  lives = START_LIVES; apples = 0;
+function showSleep(){ state = 'menu'; $('hud').classList.add('hidden'); show('sleep'); }
+function beginPlay(){
+  placeAtStart();
   pointers.clear(); input.dragPx = 0; input.jumpBuf = 0;
+  power.kind = null; power.t = 0; power.shield = false; follower = null; gScale = 1; boss.active = false; lastM = -1;
   state = 'play';
   ball.wait = 0.6;
   setForm('ball'); sfx.curl();
   $('hud').classList.remove('hidden');
-  show(null); updateHud();
-  const newObs = OBST.find(o => o.from === n && !save.seen[o.type]);
-  if (newObs){ save.seen[newObs.type] = 1; writeSave(); toast(world.emoji + ' Level ' + n + '<br><span style="font-size:24px">' + newObs.label + '</span>', 2600); }
-  else if (n % 10 === 1) toast(world.emoji + ' ' + world.name + ' Dünyası<br><span style="font-size:24px">Level ' + n + '</span>', 2000);
+  show(null);
+}
+function setupBoss(){
+  boss.active = isBoss;
+  if (!isBoss) return;
+  const g = new THREE.Group(), wd = world.decor;
+  const mat = wd === 'volcano' ? basic(0xff7a1a) : (wd === 'winter' || wd === 'mountain') ? lam(0xffffff) : lam(0x7a7480);
+  const b = new THREE.Mesh(wd === 'winter' || wd === 'mountain' || wd === 'volcano' ? new THREE.SphereGeometry(2, 20, 14) : new THREE.DodecahedronGeometry(2.1), mat);
+  g.add(b);
+  [-1, 1].forEach(sd => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 8), basic(0x111111)); e.position.set(sd * 0.7, 0.5, -1.75); g.add(e);
+    const br = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.14, 0.1), basic(0x111111)); br.position.set(sd * 0.7, 0.95, -1.7); br.rotation.z = -sd * 0.4; g.add(br); });
+  addObj(g); boss.mesh = g; boss.ballMesh = b; boss.s = ball.s - 13;
+}
+function startLevel(n, o){
+  o = o || {};
+  if (limitHit()) return showSleep();
+  initAudio(); mode = 'normal';
+  const keepFlag = !!o.fromFlag && flagHit && level === n, fa = flagApples;
+  buildLevel(n, { boss: n % 50 === 0, friend: n % 4 === 2, flag: true });
+  lives = START_LIVES; apples = 0; flagHit = false;
+  beginPlay();
+  if (keepFlag && flagS){
+    ball.s = flagS + 0.5; ball.checkpoint = ball.s; apples = fa; flagHit = true; flagApples = fa;
+    pickups.forEach(pk => { if (pk.s < flagS){ pk.taken = true; pk.mesh.visible = false; } });
+  }
+  setupBoss();
+  updateHud();
+  const newObs = OBST.find(ob => ob.from === n && !save.seen[ob.type]);
+  if (isBoss) toast('👑 BOSS LEVEL!<br><span style="font-size:22px">Elma topla, kovalayan uzaklaşsın!</span>', 2800);
+  else if (newObs){ save.seen[newObs.type] = 1; writeSave(); toast(world.emoji + ' Level ' + n + '<br><span style="font-size:24px">' + newObs.label + '</span>', 2600); }
+  else if (keepFlag) toast('🚩 Bayraktan devam!', 1200);
+  else if (n % 50 === 1) toast(world.emoji + ' ' + world.name + ' Dünyası<br><span style="font-size:24px">Level ' + n + '</span>', 2000);
   else if (n <= 2) toast('Kaydır ve dokun!', 1500);
   else toast(world.emoji + ' Level ' + n, 1000);
 }
+function startDaily(){
+  if (limitHit()) return showSleep();
+  initAudio(); mode = 'daily';
+  const d = dateStr(); let seed = 7;
+  for (let k = 0; k < d.length; k++) seed = (seed * 31 + d.charCodeAt(k)) % 2147483647;
+  buildLevel(0, { seed, wi: seed % 10, cfgN: clamp(Math.round(save.unlocked * 0.8), 10, 400), tiles: 60 });
+  lives = START_LIVES; apples = 0; flagHit = false;
+  beginPlay(); updateHud();
+  toast('🎁 Günün Leveli<br><span style="font-size:22px">' + world.emoji + ' ' + world.name + '</span>', 1800);
+}
+function buildEndlessStage(){
+  const k = endless.stage;
+  buildLevel(0, { seed: 1 + Math.floor(Math.random() * 1e9), wi: (endless.wi0 + k - 1) % 10, cfgN: Math.min(450, 5 + k * 30), tiles: 34 });
+}
+function startEndless(){
+  if (limitHit()) return showSleep();
+  initAudio(); mode = 'endless';
+  endless.stage = 1; endless.base = 0; endless.wi0 = Math.floor(Math.random() * 10);
+  buildEndlessStage();
+  lives = START_LIVES; apples = 0; flagHit = false;
+  beginPlay(); updateHud();
+  toast('∞ Sonsuz Mod<br><span style="font-size:22px">Ne kadar uzağa gidebilirsin?</span>', 2000);
+}
+function nextStage(){
+  endless.base += finishS; endless.stage++;
+  const pk = power.kind, pt = power.t, ps = power.shield;
+  buildEndlessStage();
+  placeAtStart(); setForm('ball', true);
+  power.kind = pk; power.t = pt; power.shield = ps; follower = null;
+  ball.wait = 0.25; lastM = -1;
+  worldAt(ball.s - 7, 0, 3.4, camera.position); worldAt(ball.s + 5, 0, 0.3, lookCur);
+  sfx.heart(); updateHud();
+  toast(world.emoji + ' Etap ' + endless.stage, 1100);
+}
+function endRun(){
+  state = 'lose'; pointers.clear();
+  let title = 'Canların bitti!', stats = 'Hiç sorun değil, bir daha dene!', retry = 'Tekrar Dene';
+  if (mode === 'endless'){
+    const m = Math.floor(endless.base + Math.max(0, ball.s)), rec = m > (save.endlessBest || 0);
+    if (rec) save.endlessBest = m;
+    title = 'Oyun bitti!'; stats = 'Mesafe: <b>' + m + ' m</b><br>' + (rec ? '<span style="color:#ffe07a">Yeni rekor!</span>' : 'Rekor: ' + save.endlessBest + ' m');
+  } else if (mode === 'normal' && flagHit){ stats = 'Bayrağa ulaşmıştın, oradan devam edebilirsin!'; retry = '🚩 Bayraktan Devam'; }
+  writeSave();
+  $('loseTitle').textContent = title; $('loseStats').innerHTML = stats; $('retryBtn').textContent = retry;
+  setTimeout(() => { if (state === 'lose') show('lose'); }, 500);
+}
 function loseLife(){
   lives--; updateHud();
-  if (lives <= 0){
-    state = 'lose'; pointers.clear();
-    setTimeout(() => { if (state === 'lose') show('lose'); }, 500);
-    return;
-  }
+  if (lives <= 0) return endRun();
   Object.assign(ball, { s: ball.checkpoint, lat: 0, targetLat: 0, y: R + 1.6, vy: 0, falling: false, grounded: false, invuln: 2, wait: 0.7, onMover: null });
   obstacles.forEach(o => { if (o.type === 'roller'){ o.s = o.s0; o.active = false; } });
+  if (boss.active) boss.s = Math.min(boss.s, ball.s - 13);
   pointers.clear(); input.dragPx = 0;
   toast(lives === 1 ? 'Son can!' : 'Kalan can: ' + lives, 1100);
 }
 function winLevel(){
   state = 'win'; winT = 0; celebrateT = 0;
   setForm('stand'); sfx.win();
+  power.kind = null; gScale = 1;
   burst(worldAt(ball.s, ball.lat, 1.2), 40, [0xffe066, 0xff6b6b, 0x7cc4ff, 0x7fd8a8, 0xc5a0ff], 6);
-  const ratio = totalApples ? apples / totalApples : 1;
-  const st = 1 + (ratio >= 0.5 ? 1 : 0) + (ratio >= 0.9 ? 1 : 0);
-  save.stars[level] = Math.max(save.stars[level] || 0, st);
-  if (level < MAX_LEVEL) save.unlocked = Math.max(save.unlocked, level + 1);
+  let extra = '', st = 0;
+  if (mode === 'daily'){
+    const today = dateStr();
+    if (save.dailyDone !== today){ save.dailyDone = today; bankAdd(30); extra += '<br>Günün hediyesi: +30 🍎'; }
+    $('winTitle').textContent = 'Günün leveli bitti!';
+  } else {
+    const ratio = totalApples ? apples / totalApples : 1;
+    st = 1 + (ratio >= 0.5 ? 1 : 0) + (ratio >= 0.9 ? 1 : 0);
+    save.stars[level] = Math.max(save.stars[level] || 0, st);
+    if (level < MAX_LEVEL) save.unlocked = Math.max(save.unlocked, level + 1);
+    const wi = WORLDS.indexOf(world);
+    if (isBoss && !save.badges[wi]){ save.badges[wi] = 1; bankAdd(50); extra += '<br>' + world.emoji + ' rozetini kazandın! +50 🍎'; }
+    $('winTitle').textContent = level === MAX_LEVEL ? 'Tüm levelleri bitirdin!' : (isBoss ? 'Boss yenildi! 👑' : 'Level ' + level + ' bitti!');
+  }
+  if (follower){ save.friends[follower.emoji] = (save.friends[follower.emoji] || 0) + 1; extra += '<br>' + follower.emoji + ' arkadaşını kurtardın!'; }
   writeSave();
-  $('winTitle').textContent = level === MAX_LEVEL ? 'Tüm levelleri bitirdin!' : 'Level ' + level + ' bitti!';
-  $('winStars').innerHTML = '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>';
-  $('winStats').textContent = '🍎 ' + apples + '/' + totalApples;
-  $('nextBtn').classList.toggle('hidden', level >= MAX_LEVEL);
+  $('winStars').innerHTML = mode === 'daily' ? '🎁' : '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>';
+  $('winStats').innerHTML = (save.name ? 'Aferin, ' + esc(save.name) + '!<br>' : '') + '🍎 ' + apples + '/' + totalApples + extra;
+  $('nextBtn').classList.toggle('hidden', mode !== 'normal' || level >= MAX_LEVEL);
   setTimeout(() => { if (state === 'win') show('win'); }, 1300);
 }
+function starMsg(n){ return world && 'Yeni dünya için ' + Math.max(0, needStars(n) - totalStars()) + ' ⭐ daha topla!'; }
 function openLevels(){
   const grid = $('grid'); grid.innerHTML = '';
+  const cur = Math.min(save.unlocked, MAX_LEVEL), ts = totalStars(), frag = document.createDocumentFragment();
   for (let n = 1; n <= MAX_LEVEL; n++){
-    if (n % 10 === 1){ const wh = document.createElement('div'); wh.className = 'wh'; const w = worldOf(n); wh.textContent = w.emoji + ' ' + w.name; grid.appendChild(wh); }
+    if (n % 50 === 1){
+      const wh = document.createElement('div'); wh.className = 'wh'; const w = worldOf(n), i = worldIdx(n);
+      wh.textContent = w.emoji + ' ' + w.name + (save.badges[i] ? ' 🏅' : '') + (ts < needStars(n) && !save.admin ? '  —  🔒 ' + needStars(n) + ' ⭐ gerekli' : '');
+      frag.appendChild(wh);
+    }
     const b = document.createElement('button');
-    const open = n <= save.unlocked || !!save.admin;
-    b.className = 'lv' + (open ? '' : ' locked') + (n === Math.min(save.unlocked, MAX_LEVEL) ? ' cur' : '');
+    const open = canPlay(n);
+    b.className = 'lv' + (open ? '' : ' locked') + (n === cur ? ' cur' : '') + (n % 50 === 0 ? ' boss' : '');
     const st = save.stars[n] || 0;
-    b.innerHTML = open ? n + '<small>' + (st ? '★'.repeat(st) : '&nbsp;') + '</small>' : '🔒<small>' + n + '</small>';
+    b.innerHTML = open ? (n % 50 === 0 ? '👑' : n) + '<small>' + (st ? '★'.repeat(st) : (n % 50 === 0 ? n : '&nbsp;')) + '</small>' : '🔒<small>' + n + '</small>';
     if (open) b.addEventListener('click', () => startLevel(n));
-    grid.appendChild(b);
+    frag.appendChild(b);
   }
+  grid.appendChild(frag);
+  $('levelsStars').textContent = '⭐ ' + ts;
   show('levels');
-  const cur = grid.querySelector('.cur'); if (cur) cur.scrollIntoView({ block: 'center' });
+  const c = grid.querySelector('.cur'); if (c) c.scrollIntoView({ block: 'center' });
 }
-$('playBtn').addEventListener('click', () => startLevel(Math.min(save.unlocked, MAX_LEVEL)));
-// secret admin mode: tap the title 7 times within 3 seconds (all levels open, real progress untouched)
+function openShop(){
+  $('shopBank').textContent = '🍎 ' + save.bank;
+  const grid = $('shopGrid'); grid.innerHTML = '';
+  SHOP.forEach(it => {
+    const b = document.createElement('button'), own = !!save.owned[it.id], on = save.wear[it.slot] === it.id;
+    b.className = 'item' + (on ? ' on' : '') + (!own && save.bank < it.price ? ' poor' : '');
+    b.innerHTML = '<span class="ic">' + it.icon + '</span>' + it.name + '<small>' + (own ? (on ? 'Çıkar' : 'Giy') : it.price + ' 🍎') + '</small>';
+    b.addEventListener('click', () => {
+      if (!own){
+        if (save.bank < it.price){ toast('Elman yetmiyor! ' + (it.price - save.bank) + ' 🍎 daha lazım', 1300); return; }
+        save.bank -= it.price; save.owned[it.id] = 1; save.wear[it.slot] = it.id; initAudio(); sfx.heart();
+      } else save.wear[it.slot] = on ? null : it.id;
+      writeSave(); applyCostume(); openShop();
+    });
+    grid.appendChild(b);
+  });
+  show('shop');
+}
+function openColl(){
+  const st = houseStage(), nextAt = HOUSE_AT[st];
+  let h = '<div class="card">✏️ Adın: <input id="nameIn" maxlength="12" placeholder="Adını yaz" value="' + esc(save.name || '') + '"></div>';
+  h += '<div class="card">🏠 <b>Kunduzun evi:</b> ' + st + '/7<br><small>' + (nextAt ? 'Sonraki aşama için ' + (nextAt - save.total) + ' 🍎 daha topla' : 'Ev tamamlandı!') + '</small></div>';
+  h += '<div class="card">⭐ ' + totalStars() + ' yıldız &nbsp; 🍎 ' + save.total + ' elma (toplam)<br>∞ Sonsuz mod rekoru: ' + (save.endlessBest || 0) + ' m</div>';
+  h += '<div class="card"><b>Boss rozetleri</b><div class="emo">' + WORLDS.map((w, i) => '<span class="' + (save.badges[i] ? '' : 'off') + '">' + w.emoji + '</span>').join('') + '</div></div>';
+  h += '<div class="card"><b>Kurtarılan arkadaşlar</b><div class="emo">' + FRIENDS.map(f => '<span class="' + (save.friends[f] ? '' : 'off') + '">' + f + (save.friends[f] ? '<small>×' + save.friends[f] + '</small>' : '') + '</span>').join('') + '</div></div>';
+  $('collBody').innerHTML = h;
+  $('nameIn').addEventListener('input', e => { save.name = e.target.value.trim().slice(0, 12); writeSave(); });
+  show('coll');
+}
+const LIMITS = [0, 15, 30, 45, 60, 90];
+function openAdmin(){
+  rollDay();
+  $('admAll').textContent = 'Tüm leveller: ' + (save.admin ? 'AÇIK 🔓' : 'Kapalı 🔒');
+  $('admLimit').textContent = 'Günlük süre: ' + (save.limitMin ? save.limitMin + ' dakika' : 'Sınırsız');
+  $('admInfo').textContent = 'Bugün oynanan: ' + Math.round((save.sec || 0) / 60) + ' dakika';
+  show('admin');
+}
+$('playBtn').addEventListener('click', () => {
+  const n = Math.min(save.unlocked, MAX_LEVEL);
+  if (canPlay(n)) startLevel(n); else { openLevels(); toast(starMsg(n), 2200); }
+});
 let adminTaps = [];
 document.querySelector('#menu h1').addEventListener('click', () => {
   const now = performance.now();
   adminTaps = adminTaps.filter(t => now - t < 3000); adminTaps.push(now);
-  if (adminTaps.length >= 7){
-    adminTaps = [];
-    save.admin = !save.admin; writeSave();
-    toast(save.admin ? 'Admin modu açık 🔓<br><span style="font-size:22px">Tüm leveller açıldı</span>' : 'Admin modu kapalı 🔒', 1800);
-  }
+  if (adminTaps.length >= 7){ adminTaps = []; openAdmin(); }
 });
+$('admAll').addEventListener('click', () => { save.admin = !save.admin; writeSave(); openAdmin(); });
+$('admLimit').addEventListener('click', () => { save.limitMin = LIMITS[(LIMITS.indexOf(save.limitMin) + 1) % LIMITS.length]; writeSave(); openAdmin(); });
+$('admReset').addEventListener('click', () => { save.sec = 0; writeSave(); openAdmin(); });
+$('admClose').addEventListener('click', goMenu);
+$('sleepOk').addEventListener('click', goMenu);
 $('levelsBtn').addEventListener('click', openLevels);
 $('levelsBack').addEventListener('click', goMenu);
-$('nextBtn').addEventListener('click', () => startLevel(Math.min(level + 1, MAX_LEVEL)));
-$('winLevelsBtn').addEventListener('click', openLevels);
-$('retryBtn').addEventListener('click', () => startLevel(level));
-$('loseLevelsBtn').addEventListener('click', openLevels);
-$('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').textContent = muted ? 'Ses: Kapalı' : 'Ses: Açık'; });
+$('dailyBtn').addEventListener('click', startDaily);
+$('endlessBtn').addEventListener('click', startEndless);
+$('shopBtn').addEventListener('click', openShop);
+$('shopBack').addEventListener('click', goMenu);
+$('collBtn').addEventListener('click', openColl);
+$('collBack').addEventListener('click', goMenu);
+$('nextBtn').addEventListener('click', () => {
+  const n = Math.min(level + 1, MAX_LEVEL);
+  if (canPlay(n)) startLevel(n); else { openLevels(); toast(starMsg(n), 2200); }
+});
+$('winLevelsBtn').addEventListener('click', () => { if (mode === 'normal') openLevels(); else goMenu(); });
+$('retryBtn').addEventListener('click', () => { if (mode === 'endless') startEndless(); else if (mode === 'daily') startDaily(); else startLevel(level, { fromFlag: true }); });
+$('loseLevelsBtn').addEventListener('click', () => { if (mode === 'normal') openLevels(); else goMenu(); });
+$('muteBtn').addEventListener('click', () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇 Ses: Kapalı' : '🔊 Ses: Açık'; });
 
 // =====================================================================
 // fish & clouds around the (curving) track
@@ -1370,9 +1804,7 @@ function updateParticles(dt){
 // =====================================================================
 function groundAt(s, lat){
   const t = tileAt(s);
-  if (!t) return null;
-  if (t.kind === 'gap') return null;
-  const u = (s - t.s0) / t.len;
+  if (!t || t.kind === 'gap') return null;
   if (t.kind === 'mover'){
     const mv = movers.find(m => m.t === t);
     const ls = s - t.s0;
@@ -1381,15 +1813,24 @@ function groundAt(s, lat){
     return { t, mover: mv };
   }
   if (t.blink && t.hidden) return null;
-  const w = lerp(t.w0, t.w1, u);
-  if (Math.abs(lat) > w / 2 + cfg.tol) return null;
-  return { t };
+  const u = (s - t.s0) / t.len, w = lerp(t.w0, t.w1, u);
+  if (Math.abs(lat) <= w / 2 + cfg.tol) return { t };
+  if (t.side && s > t.s0 + 0.3 && s < t.s0 + t.len - 0.3 && Math.abs(lat - t.side.lat) <= t.side.w / 2 + cfg.tol + 0.1) return { t, side: true };
+  return null;
+}
+function givePower(kind){
+  if (kind === 'shield'){ power.shield = true; }
+  else { power.kind = kind; power.t = POW[kind].t; }
+  toast(POW[kind].icon + ' ' + POW[kind].name + '!', 1100);
+  sfx.heart();
 }
 
 function stepPlay(dt){
   if (ball.wait > 0) ball.wait -= dt;
   const moving = ball.wait <= 0;
   ball.invuln = Math.max(0, ball.invuln - dt);
+  if (power.kind){ power.t -= dt; if (power.t <= 0) power.kind = null; }
+  updatePowHud();
 
   // smooth steering (ice is slippery)
   const tNow = tileAt(ball.s);
@@ -1397,10 +1838,10 @@ function stepPlay(dt){
   const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   ball.targetLat += input.dragPx * (6 / Math.max(320, window.innerWidth)) + steer * 6.5 * dt;
   input.dragPx = 0;
+  if (tNow && tNow.wind && moving){ ball.targetLat += tNow.wind * 1.3 * dt; ball.lat += tNow.wind * 0.4 * dt; }
   ball.targetLat = clamp(ball.targetLat, ball.lat - 3.5, ball.lat + 3.5);
   const prevLat = ball.lat;
   if (!ball.falling) ball.lat = lerp(ball.lat, ball.targetLat, 1 - Math.exp(-glide * dt));
-  // riding a moving platform
   if (ball.onMover && ball.grounded){ ball.lat += ball.onMover.vel * dt; ball.targetLat += ball.onMover.vel * dt; }
   const vlat = (ball.lat - prevLat) / Math.max(dt, 0.001);
   ball.rollV = lerp(ball.rollV, vlat, 1 - Math.exp(-12 * dt));
@@ -1411,7 +1852,8 @@ function stepPlay(dt){
   }
 
   if (moving) ball.s += ball.speed * dt;
-  ball.vy -= G * dt;
+  const g = grav() * (power.kind === 'wing' && ball.vy < 0 && !ball.falling ? 0.3 : 1);
+  ball.vy -= g * dt;
   ball.y += ball.vy * dt;
   if (ball.falling) ball.lat += ball.rollV * dt * 0.5;
 
@@ -1420,7 +1862,7 @@ function stepPlay(dt){
     if (!ball.grounded && ball.vy < -4){ squashT = 0.22; squashAmt = clamp(-ball.vy / 60, 0.08, 0.22); }
     ball.y = R; ball.vy = 0; ball.grounded = true; ball.coyote = 0.12;
     ball.onMover = gr.mover || null;
-    if (gr.t.kind === 'road' && !gr.t.blink && !gr.t.finish) ball.checkpoint = gr.t.s0 + 0.3;
+    if (gr.t.kind === 'road' && !gr.t.blink && !gr.t.finish && !gr.t.beam && !gr.side) ball.checkpoint = gr.t.s0 + 0.3;
   } else {
     ball.grounded = false; ball.onMover = null;
     ball.coyote = Math.max(0, ball.coyote - dt);
@@ -1435,6 +1877,12 @@ function stepPlay(dt){
   const fwd = new THREE.Vector3(Math.sin(c.h), 0, -Math.cos(c.h));
   beaver.ball.rotateOnWorldAxis(fwd, ball.rollV * dt / R);
 
+  // checkpoint flag
+  if (flagS && !flagHit && ball.s > flagS && ball.grounded){
+    flagHit = true; flagApples = apples; sfx.heart(); writeSave();
+    toast('🚩 Kontrol noktası!', 1100);
+  }
+
   // trampolines
   pads.forEach(pd => {
     pd.cool = Math.max(0, pd.cool - dt);
@@ -1445,36 +1893,70 @@ function stepPlay(dt){
     pd.mesh.userData.top.scale.y = lerp(pd.mesh.userData.top.scale.y, 1, 1 - Math.exp(-8 * dt));
   });
 
-  // pickups
+  // pickups (the magnet pulls apples in)
+  const reach = power.kind === 'giant' ? 1.4 : 0.9;
   pickups.forEach(pk => {
-    if (pk.taken || Math.abs(pk.s - ball.s) > 1) return;
-    if (Math.abs(pk.lat - ball.lat) < 0.85 && Math.abs(pk.y - ball.y) < 0.9){
+    if (pk.taken) return;
+    const ds = pk.s - ball.s;
+    if (power.kind === 'magnet' && (pk.type === 'apple' || pk.type === 'gold') && ds > -1 && ds < 9 && Math.abs(pk.lat - ball.lat) < 4.5){
+      const k = 1 - Math.exp(-7 * dt);
+      pk.lat = lerp(pk.lat, ball.lat, k); pk.y = lerp(pk.y, ball.y, k);
+      if (ds < 4) pk.s = lerp(pk.s, ball.s + 0.3, k);
+      place(pk.mesh, pk.s, pk.lat, pk.y);
+    }
+    if (Math.abs(ds) > 1.1) return;
+    if (Math.abs(pk.lat - ball.lat) < reach && Math.abs(pk.y - ball.y) < reach){
       pk.taken = true; pk.mesh.visible = false;
       if (pk.type === 'heart'){
         if (lives < MAX_LIVES){ lives++; toast('+1 can! ❤️', 1100); } else toast('Canların dolu! ❤️', 1000);
         sfx.heart(); burst(pk.mesh.position, 24, [0xff3a6a, 0xffffff, 0xff9ab8], 5);
+      } else if (pk.type === 'pow'){
+        givePower(pk.kind); burst(pk.mesh.position, 20, [0x7cd8ff, 0xffffff, 0xffe066], 5);
+      } else if (pk.type === 'friend'){
+        const sp = emojiSprite(pk.kind, 0.75); addObj(sp);
+        follower = { m: sp, emoji: pk.kind, lat: ball.lat };
+        sfx.heart(); toast(pk.kind + ' Bir arkadaş buldun!<br><span style="font-size:22px">Bitişe kadar götür!</span>', 1800);
+      } else if (pk.type === 'gold'){
+        bankAdd(10); sfx.heart(); burst(pk.mesh.position, 24, [0xffd23a, 0xffffff], 6); toast('Altın elma! +10 🍎', 1200);
       } else {
-        apples++; sfx.apple(); burst(pk.mesh.position, 14, [0xffe066, 0xff6b6b, 0xffffff], 4);
+        apples++; bankAdd(1); sfx.apple(); burst(pk.mesh.position, 14, [0xffe066, 0xff6b6b, 0xffffff], 4);
+        if (boss.active) boss.s -= 1.5;
       }
       updateHud();
     }
   });
 
   // obstacles
-  if (!ball.falling && ball.invuln <= 0){
+  if (!ball.falling){
     for (const o of obstacles){
-      if (Math.abs(o.s - ball.s) > 3) continue;
-      if (obstacleHit(o)){
-        sfx.bonk(); ball.falling = true; ball.vy = 5; ball.grounded = false;
-        ball.rollV = (o.curLat > ball.lat ? -1 : 1) * 4;
-        break;
-      }
+      if (o.dead || Math.abs(o.s - ball.s) > 3) continue;
+      if (!obstacleHit(o)) continue;
+      if (power.kind === 'giant'){ o.dead = true; o.mesh.visible = false; burst(o.mesh.position, 18, [0xffffff, 0xffcf3f, 0xff8fb1], 7); sfx.bonk(); continue; }
+      if (ball.invuln > 0) continue;
+      if (power.shield){ power.shield = false; ball.invuln = 1.2; sfx.bonk(); burst(ballWorld, 20, [0x7cd8ff, 0xffffff], 6); toast('Kalkan seni korudu! 🛡️', 1000); break; }
+      sfx.bonk(); ball.falling = true; ball.vy = 5; ball.grounded = false;
+      ball.rollV = (o.curLat > ball.lat ? -1 : 1) * 4;
+      break;
+    }
+  }
+
+  // boss chaser: creeps closer, every apple pushes it back
+  if (boss.active){
+    if (moving) boss.s += ball.speed * 1.05 * dt;
+    boss.s = Math.max(boss.s, ball.s - 20);
+    if (boss.s > ball.s - 2.6 && !ball.falling){
+      sfx.bonk(); toast('Yakalandın!', 900);
+      loseLife(); if (state !== 'play') return;
     }
   }
 
   // progress + finish
   $('barFill').style.width = (clamp(ball.s / finishS, 0, 1) * 100).toFixed(1) + '%';
-  if (ball.s > finishS + 1.5 && !ball.falling && ball.grounded) winLevel();
+  if (mode === 'endless'){ const m = Math.floor(endless.base + Math.max(0, ball.s)); if (m !== lastM){ lastM = m; $('hLevel').textContent = '∞ ' + m + ' m'; } }
+  if (ball.s > finishS + 1.5 && !ball.falling && ball.grounded){
+    if (mode === 'endless') nextStage(); else winLevel();
+    return;
+  }
   beaver.root.visible = ball.invuln <= 0 || Math.floor(ball.invuln * 10) % 2 === 0;
 }
 
@@ -1520,9 +2002,9 @@ function updateLevelObjects(dt){
       if (o.s < ball.s - 10) o.s = -1000;
       place(o.mesh, o.s, o.lat, 0);
       o.mesh.userData.spin.rotation.x += o.speed * dt / 0.45 * (o.active ? 1 : 0);
-      o.mesh.visible = o.s > -999;
+      o.mesh.visible = o.s > -999 && !o.dead;
     } else if (o.type === 'hopper'){
-      o.hy = 0.42 * o.k + 2.2 * Math.max(0, Math.sin(t * o.freq + o.ph));
+      o.hy = 0.42 * o.k + 2.4 * Math.abs(Math.sin(t * o.freq * 0.8 + o.ph));
       place(o.mesh, o.s, o.lat, o.hy);
     } else if (!o.placed){ place(o.mesh, o.s, o.lat, 0); o.placed = true; }
   });
@@ -1549,6 +2031,7 @@ function updateLevelObjects(dt){
     pk.mesh.rotation.y += dt * 2;
     pk.mesh.position.y = pk.y + Math.sin(time * 3 + pk.ph) * 0.1;
   });
+  winds.forEach(w => w.g.children.forEach((a, i) => { a.position.x = (((time * 0.9 + i / 3) % 1) - 0.5) * w.dir * w.width; }));
   decorAnims.forEach(fn => fn(time));
   if (world.decor === 'volcano' && groundMesh.material.color){ groundMesh.material.color.setHSL(0.06, 1, 0.5 + Math.sin(time * 1.5) * 0.06); }
 }
@@ -1560,6 +2043,8 @@ const camTarget = new THREE.Vector3(), lookTarget = new THREE.Vector3(), lookCur
 function step(dt){
   time += dt;
   updateForm(dt);
+  if (state === 'play'){ save.sec = (save.sec || 0) + dt; secAcc += dt; if (secAcc > 20){ secAcc = 0; rollDay(); writeSave(); } }
+  musicTick();
   const c = centerAt(ball.s);
 
   if (state === 'play'){
@@ -1591,6 +2076,11 @@ function step(dt){
 
   worldAt(ball.s, ball.lat, ball.y, ballWorld);
   beaver.root.position.copy(ballWorld);
+  gScale = lerp(gScale, power.kind === 'giant' && state === 'play' ? 1.7 : 1, 1 - Math.exp(-6 * dt));
+  beaver.root.scale.setScalar(gScale); beaver.root.position.y += (gScale - 1) * R;
+  shieldMesh.visible = power.shield && state === 'play';
+  if (boss.active && boss.mesh){ place(boss.mesh, boss.s, 0, 2.0); boss.ballMesh.rotation.x -= dt * 4; boss.mesh.visible = state === 'play' || state === 'lose'; }
+  if (follower){ follower.lat = lerp(follower.lat, ball.lat, 1 - Math.exp(-4 * dt)); place(follower.m, ball.s - 1.3, follower.lat, 0.45 + Math.abs(Math.sin(time * 8)) * 0.25); }
   squashT = Math.max(0, squashT - dt);
   const sq = squashT > 0 ? Math.sin((1 - squashT / 0.22) * Math.PI) * squashAmt : 0;
   const bob = state === 'play' && ball.grounded && ball.wait <= 0 ? Math.abs(Math.sin(ball.s * 2.2)) * 0.025 : 0;
@@ -1620,8 +2110,8 @@ function step(dt){
   // camera (follows the curve)
   const f = 1 - Math.exp(-4.5 * dt);
   if (state === 'menu' || state === 'win'){
-    worldAt(ball.s - 3.1, ball.lat + 0.9, 1.45, camTarget);
-    worldAt(ball.s, ball.lat, 0.75, lookTarget);
+    worldAt(ball.s - (state === 'menu' ? 3.9 : 3.1), ball.lat + 0.9, 1.45, camTarget);
+    worldAt(ball.s, ball.lat, state === 'menu' ? 0.2 : 0.75, lookTarget);
   } else if (state === 'play' && !ball.falling){
     worldAt(ball.s - 7, ball.lat * 0.85, 3.4 + Math.max(0, ball.y - R) * 0.35, camTarget);
     worldAt(ball.s + 5, ball.lat * 0.9, 0.3, lookTarget);
