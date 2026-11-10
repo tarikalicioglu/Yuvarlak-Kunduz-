@@ -1254,7 +1254,7 @@ function openLevels(){
   for (let n = 1; n <= MAX_LEVEL; n++){
     if (n % 10 === 1){ const wh = document.createElement('div'); wh.className = 'wh'; const w = worldOf(n); wh.textContent = w.emoji + ' ' + w.name; grid.appendChild(wh); }
     const b = document.createElement('button');
-    const open = n <= save.unlocked;
+    const open = n <= save.unlocked || !!save.admin;
     b.className = 'lv' + (open ? '' : ' locked') + (n === Math.min(save.unlocked, MAX_LEVEL) ? ' cur' : '');
     const st = save.stars[n] || 0;
     b.innerHTML = open ? n + '<small>' + (st ? '★'.repeat(st) : '&nbsp;') + '</small>' : '🔒<small>' + n + '</small>';
@@ -1265,6 +1265,17 @@ function openLevels(){
   const cur = grid.querySelector('.cur'); if (cur) cur.scrollIntoView({ block: 'center' });
 }
 $('playBtn').addEventListener('click', () => startLevel(Math.min(save.unlocked, MAX_LEVEL)));
+// secret admin mode: tap the title 7 times within 3 seconds (all levels open, real progress untouched)
+let adminTaps = [];
+document.querySelector('#menu h1').addEventListener('click', () => {
+  const now = performance.now();
+  adminTaps = adminTaps.filter(t => now - t < 3000); adminTaps.push(now);
+  if (adminTaps.length >= 7){
+    adminTaps = [];
+    save.admin = !save.admin; writeSave();
+    toast(save.admin ? 'Admin modu açık 🔓<br><span style="font-size:22px">Tüm leveller açıldı</span>' : 'Admin modu kapalı 🔒', 1800);
+  }
+});
 $('levelsBtn').addEventListener('click', openLevels);
 $('levelsBack').addEventListener('click', goMenu);
 $('nextBtn').addEventListener('click', () => startLevel(Math.min(level + 1, MAX_LEVEL)));
