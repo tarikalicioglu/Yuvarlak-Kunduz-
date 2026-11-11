@@ -15,85 +15,157 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
 <style>
+  :root{--bark:#5a3416;--wood:#8a5a2b;--cream:#fff6e0;--honey:#ffcf3f;--honey-hi:#ffe27a;--apple:#e5484d;--rose:#ff8fb1;--river:#1f4f7d}
   html,body{margin:0;height:100%;overflow:hidden;font-family:'Baloo 2',system-ui,sans-serif;
     background:linear-gradient(#5fb2ea 0%,#9fd3f3 55%,#e3f3fb 100%);transition:background .6s;
     user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
   canvas{display:block;touch-action:none}
+  #bg{position:fixed;inset:0;z-index:-1;display:none}
+  #bgImg{position:absolute;left:0;right:0;top:0;height:max(47vh,56vw);background-repeat:no-repeat;background-position:50% 0;background-size:cover;
+    -webkit-mask-image:linear-gradient(#000 74%,transparent);mask-image:linear-gradient(#000 74%,transparent)}
+  .pose{display:block;margin:0 auto 6px;height:150px;width:auto;pointer-events:none}
   .hidden{display:none!important}
-  #hud{position:fixed;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;pointer-events:none;color:#fff;
-    font-weight:800;font-size:20px;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  button{touch-action:manipulation}
+  button:focus-visible,input:focus-visible{outline:4px solid #fff;outline-offset:3px}
+
+  /* sticker lettering: cream fill, bark outline, hard drop */
+  h1,h2,#toast{color:var(--cream);-webkit-text-stroke:9px var(--bark);paint-order:stroke fill;
+    text-shadow:0 6px 0 var(--bark);letter-spacing:.01em}
+  h1{font-size:clamp(44px,13.5vw,68px);margin:6px 0 0;line-height:1;transform:rotate(-3deg);white-space:nowrap}
+  h2{font-size:clamp(34px,10.5vw,44px);margin:0;line-height:1.1;-webkit-text-stroke-width:6px;letter-spacing:.03em;text-shadow:0 4px 0 var(--bark)}
+  #toast{position:fixed;top:22%;left:0;right:0;text-align:center;font-weight:800;font-size:34px;line-height:1.2;
+    -webkit-text-stroke-width:7px;text-shadow:0 4px 0 var(--bark);pointer-events:none;opacity:0;transition:opacity .3s;padding:0 16px}
+
+  /* HUD */
+  #hud{position:fixed;top:calc(10px + env(safe-area-inset-top));left:10px;right:10px;pointer-events:none;
+    color:var(--bark);font-weight:800;font-size:19px}
   #hudRow{display:flex;justify-content:space-between;align-items:center;gap:6px}
-  .pill{background:rgba(0,0,0,.25);padding:1px 12px;border-radius:999px;white-space:nowrap}
-  #bar{margin-top:8px;height:10px;border-radius:999px;background:rgba(0,0,0,.2);overflow:hidden}
-  #barFill{height:100%;width:0;background:linear-gradient(90deg,#ffcf3f,#ff8fb1);border-radius:999px}
-  #toast{position:fixed;top:22%;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:34px;line-height:1.15;
-    text-shadow:0 4px 0 rgba(0,0,0,.3);pointer-events:none;opacity:0;transition:opacity .3s;padding:0 16px}
+  .pill{background:var(--cream);border:3px solid var(--bark);box-shadow:0 3px 0 var(--bark);
+    padding:0 11px;border-radius:999px;white-space:nowrap;line-height:1.5}
+  #bar{margin-top:10px;height:14px;border-radius:999px;background:var(--cream);border:3px solid var(--bark);overflow:hidden}
+  #barFill{height:100%;width:0;background:repeating-linear-gradient(-45deg,var(--honey) 0 10px,var(--honey-hi) 10px 20px);
+    border-right:3px solid var(--bark);border-radius:999px}
+  #pauseBtn{position:fixed;top:calc(72px + env(safe-area-inset-top));right:10px;width:48px;height:48px;border-radius:50%;
+    border:3px solid var(--bark);box-shadow:0 3px 0 var(--bark);background:var(--cream);color:var(--bark);font-size:20px;cursor:pointer;padding:0}
+  #pauseBtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bark)}
+
+  /* screens */
   .overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     color:#fff;text-align:center;padding:24px;box-sizing:border-box}
-  .dim{background:rgba(25,45,85,.5)}
-  #menu{justify-content:space-between;padding-top:calc(36px + env(safe-area-inset-top));
-    padding-bottom:calc(36px + env(safe-area-inset-bottom));
-    background:linear-gradient(rgba(25,45,85,.35),rgba(25,45,85,0) 30%,rgba(25,45,85,0) 62%,rgba(25,45,85,.45))}
-  h1{font-size:58px;margin:0;line-height:1;text-shadow:0 5px 0 rgba(0,0,0,.25)}
-  h2{font-size:40px;margin:0;line-height:1.1;text-shadow:0 4px 0 rgba(0,0,0,.25)}
-  .sub{font-size:19px;margin:8px 0 0;line-height:1.3;text-shadow:0 2px 0 rgba(0,0,0,.25)}
-  .btns{display:flex;flex-direction:column;gap:12px;align-items:center}
-  .big{font-family:inherit;font-weight:800;font-size:26px;border:none;border-radius:999px;padding:10px 40px;
-    background:#ffcf3f;color:#6a4319;box-shadow:0 6px 0 #c9971a;cursor:pointer;min-width:220px}
-  .big:active{transform:translateY(4px);box-shadow:0 2px 0 #c9971a}
-  .big.alt{background:#fff;color:#2b5d8a;box-shadow:0 6px 0 #b9cfe2}
-  .small{font-family:inherit;font-weight:800;font-size:15px;border:none;border-radius:999px;padding:4px 14px;
-    background:rgba(0,0,0,.28);color:#fff;cursor:pointer}
-  .stats{font-size:24px;margin:10px 0 20px}
-  .stars{font-size:46px;letter-spacing:4px;color:#ffe07a;text-shadow:0 3px 0 rgba(0,0,0,.25)}
-  .stars .off{color:rgba(255,255,255,.35)}
-  #levels{background:rgba(25,55,100,.92);justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))}
-  #levelsHead{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:520px;margin-bottom:12px}
-  #grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:100%;max-width:520px;overflow-y:auto;
-    padding:4px 4px 30px;box-sizing:border-box;touch-action:pan-y;-webkit-overflow-scrolling:touch;flex:1;align-content:start}
-  .wh{grid-column:1/-1;text-align:left;font-size:22px;font-weight:800;margin:8px 0 0;text-shadow:0 2px 0 rgba(0,0,0,.25)}
-  .lv{font-family:inherit;font-weight:800;font-size:22px;border:none;border-radius:16px;aspect-ratio:1;
-    background:#ffcf3f;color:#6a4319;box-shadow:0 4px 0 #c9971a;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;line-height:1;cursor:pointer;padding:0}
-  .lv small{font-size:11px;color:#b5651d;margin-top:3px;letter-spacing:1px}
-  .lv.locked{background:rgba(255,255,255,.22);color:rgba(255,255,255,.7);box-shadow:none;cursor:default}
-  .lv.cur{outline:4px solid #fff}
-  .lv.boss{background:#ff8fb1;color:#7a1f3a;box-shadow:0 4px 0 #c95a80}
-  .lv.boss.locked{background:rgba(255,255,255,.22);color:rgba(255,255,255,.7);box-shadow:none}
+  .dim{background:rgba(25,45,85,.55)}
+  #menu,#win{justify-content:space-between;padding-top:calc(36px + env(safe-area-inset-top));
+    padding-bottom:calc(32px + env(safe-area-inset-bottom));
+    background:linear-gradient(rgba(25,45,85,.3),rgba(25,45,85,0) 30%,rgba(25,45,85,0) 60%,rgba(25,45,85,.5))}
+  .sub{display:table;margin:12px auto 0;font-size:18px;line-height:1.5;font-weight:800;color:var(--bark);
+    background:var(--cream);border:3px solid var(--bark);box-shadow:0 3px 0 var(--bark);border-radius:999px;padding:0 14px}
+  #menuBank{margin-top:8px;word-spacing:2px}
+  .btns{display:flex;flex-direction:column;gap:13px;align-items:center}
   .row{display:flex;gap:10px}
-  #pauseBtn{position:fixed;top:calc(62px + env(safe-area-inset-top));right:10px;width:46px;height:46px;border-radius:50%;border:none;
-    background:rgba(0,0,0,.3);color:#fff;font-size:20px;cursor:pointer;padding:0}
-  .mid{font-family:inherit;font-weight:800;font-size:16px;border:none;border-radius:999px;padding:8px 6px;width:158px;
-    background:#fff;color:#2b5d8a;box-shadow:0 5px 0 #b9cfe2;cursor:pointer;white-space:nowrap}
-  .mid:active{transform:translateY(3px);box-shadow:0 2px 0 #b9cfe2}
-  #shop{justify-content:flex-end;padding:0;background:linear-gradient(rgba(25,55,100,0) 38%,rgba(25,55,100,.95) 50%)}
-  .panel{width:100%;max-width:520px;height:52%;display:flex;flex-direction:column;padding:10px 14px calc(14px + env(safe-area-inset-bottom));box-sizing:border-box}
-  .phead{display:flex;justify-content:space-between;align-items:center;font-size:22px;margin-bottom:8px}
-  #shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;overflow-y:auto;touch-action:pan-y;flex:1;align-content:start}
-  .item{font-family:inherit;font-weight:800;font-size:15px;border:none;border-radius:14px;padding:8px;background:#fff;color:#2b5d8a;
-    display:flex;flex-direction:column;align-items:center;line-height:1.15;cursor:pointer}
-  .item .ic{font-size:28px}
-  .item small{font-size:13px;color:#b5651d}
-  .item.on{background:#ffcf3f;color:#6a4319}
+
+  /* buttons: one family, three sizes */
+  .big,.mid,.small,.lv,.item{font-family:inherit;font-weight:800;cursor:pointer;border:3px solid var(--bark);color:var(--bark)}
+  .big{font-size:26px;border-radius:999px;padding:9px 36px;min-width:230px;
+    background:linear-gradient(var(--honey-hi),var(--honey) 55%);box-shadow:0 7px 0 var(--bark)}
+  .big:active{transform:translateY(5px);box-shadow:0 2px 0 var(--bark)}
+  .big.alt{background:var(--cream)}
+  #playBtn{font-size:30px;padding:10px 40px;min-width:270px}
+  .mid{font-size:16px;border-radius:18px;padding:8px 4px;width:158px;background:var(--cream);
+    box-shadow:0 5px 0 var(--bark);white-space:nowrap}
+  .mid:active{transform:translateY(3px);box-shadow:0 2px 0 var(--bark)}
+  .small{font-size:16px;border-radius:999px;padding:5px 16px;background:var(--cream);box-shadow:0 3px 0 var(--bark);min-height:40px}
+  .small:active{transform:translateY(2px);box-shadow:0 1px 0 var(--bark)}
+
+  /* paper sheet for pause / lose / sleep / parent settings */
+  .sheet{background:var(--cream);color:var(--bark);border:4px solid var(--bark);border-radius:30px;
+    box-shadow:0 9px 0 var(--bark);padding:26px 22px 28px;width:100%;max-width:340px;box-sizing:border-box}
+  .sheet h2{color:var(--bark);-webkit-text-stroke:0;text-shadow:none;font-size:clamp(30px,9vw,38px)}
+  .sheet .btns{margin-top:18px}
+  .sheet .big{min-width:0;width:100%;padding-left:10px;padding-right:10px;font-size:23px}
+  .stats{font-size:22px;line-height:1.35;margin:10px 0 0}
+
+  /* level finished: title above the beaver, buttons below */
+  #winStats{display:table;margin:10px auto 0;font-size:21px;font-weight:800;color:var(--bark);background:var(--cream);
+    border:3px solid var(--bark);box-shadow:0 3px 0 var(--bark);border-radius:20px;padding:2px 16px}
+  .stars{font-size:62px;line-height:1.1;margin-top:18px;letter-spacing:2px;color:var(--honey);
+    -webkit-text-stroke:7px var(--bark);paint-order:stroke fill;text-shadow:0 5px 0 var(--bark)}
+  .stars i{font-style:normal;display:inline-block}
+  .stars i:nth-child(2){transform:translateY(-10px) scale(1.15)}
+  .stars .off{color:#e9dcc0}
+  .stars .off i{transform:none}
+  .stars img{height:64px;vertical-align:middle;filter:drop-shadow(0 4px 0 rgba(90,52,20,.35))}
+  .stars .off img{filter:grayscale(1) brightness(1.35) opacity(.55)}
+  .ic{height:1.25em;vertical-align:-.28em;margin:0 1px}
+  .ic.off{filter:grayscale(1) brightness(1.3) opacity(.5)}
+
+  /* level map */
+  #levels,#coll{background:linear-gradient(rgba(31,79,125,.96),rgba(22,58,96,.97));justify-content:flex-start;
+    padding-top:calc(20px + env(safe-area-inset-top))}
+  #levelsHead,.phead{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:520px;margin-bottom:12px}
+  #levelsHead h2{font-size:30px;-webkit-text-stroke-width:6px}
+  #levelsStars{font-size:18px}
+  #grid{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;width:100%;max-width:520px;overflow-y:auto;
+    padding:6px 5px 34px;box-sizing:border-box;touch-action:pan-y;-webkit-overflow-scrolling:touch;flex:1;align-content:start}
+  .wh{grid-column:1/-1;text-align:left;font-size:21px;font-weight:800;margin:12px 0 0;color:var(--cream)}
+  .lv{font-size:23px;border-radius:17px;aspect-ratio:1;background:linear-gradient(var(--honey-hi),var(--honey) 60%);
+    box-shadow:0 4px 0 var(--bark);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;padding:0}
+  .lv:active{transform:translateY(3px);box-shadow:0 1px 0 var(--bark)}
+  .lv small{font-size:11px;color:var(--wood);margin-top:3px;letter-spacing:1px}
+  .lv.boss{background:linear-gradient(#ffb3c9,var(--rose) 60%)}
+  .lv.locked,.lv.boss.locked{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);color:rgba(255,255,255,.6);
+    box-shadow:none;cursor:default;transform:none;font-size:18px}
+  .lv.locked small{color:rgba(255,255,255,.6);font-size:12px}
+  .lv.cur{outline:4px solid #fff;outline-offset:2px}
+
+  /* shop */
+  #shop{justify-content:flex-end;padding:0;background:linear-gradient(rgba(31,79,125,0) 36%,rgba(31,79,125,.96) 49%)}
+  .panel{width:100%;max-width:520px;height:52%;display:flex;flex-direction:column;
+    padding:10px 14px calc(14px + env(safe-area-inset-bottom));box-sizing:border-box}
+  .phead{font-size:22px;margin-bottom:8px}
+  #shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;overflow-y:auto;touch-action:pan-y;flex:1;align-content:start;padding:2px 3px 12px}
+  .item{font-size:15px;border-radius:16px;padding:8px;background:var(--cream);box-shadow:0 4px 0 var(--bark);
+    display:flex;flex-direction:column;align-items:center;line-height:1.15}
+  .item:active{transform:translateY(3px);box-shadow:0 1px 0 var(--bark)}
+  .item .ic{font-size:30px}
+  .item small{font-size:13px;color:var(--wood)}
+  .item.on{background:linear-gradient(var(--honey-hi),var(--honey) 60%)}
   .item.poor{opacity:.55}
-  #coll{background:rgba(25,55,100,.94);justify-content:flex-start;padding-top:calc(20px + env(safe-area-inset-top))}
-  #collBody{width:100%;max-width:520px;overflow-y:auto;touch-action:pan-y;flex:1;text-align:left}
-  .card{background:rgba(255,255,255,.14);border-radius:14px;padding:10px 14px;margin-bottom:10px;font-size:18px;line-height:1.3}
-  .card small{font-size:14px;opacity:.85}
+
+  /* collection */
+  #collBody{width:100%;max-width:520px;overflow-y:auto;touch-action:pan-y;flex:1;text-align:left;padding:2px 3px 20px;box-sizing:border-box}
+  .card{background:var(--cream);color:var(--bark);border:3px solid var(--bark);box-shadow:0 4px 0 var(--bark);
+    border-radius:18px;padding:10px 14px;margin-bottom:13px;font-size:18px;line-height:1.3}
+  .card small{font-size:14px;color:var(--wood)}
   .emo{font-size:30px;display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
   .emo span{position:relative}
   .emo span.off{filter:grayscale(1);opacity:.3}
-  .emo small{font-size:12px;position:absolute;right:-6px;bottom:-4px;background:#ffcf3f;color:#6a4319;border-radius:8px;padding:0 4px}
-  input{font-family:inherit;font-weight:800;font-size:18px;border:none;border-radius:10px;padding:4px 10px;width:150px;
-    user-select:text;-webkit-user-select:text;color:#2b5d8a}
+  .emo small{font-size:12px;position:absolute;right:-6px;bottom:-4px;background:var(--honey);color:var(--bark);border-radius:8px;padding:0 4px}
+  input{font-family:inherit;font-weight:800;font-size:18px;border:3px solid var(--bark);border-radius:12px;padding:3px 10px;width:150px;
+    user-select:text;-webkit-user-select:text;color:var(--bark);background:#fff}
+
+  /* motion: things answer the player, nothing loops except the level you are on */
+  @keyframes drop{0%{transform:translateY(-140%) rotate(-9deg)}60%{transform:translateY(6%) rotate(-2deg)}80%{transform:translateY(-3%) rotate(-4deg)}100%{transform:rotate(-3deg)}}
+  @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.05);opacity:1}100%{transform:scale(1)}}
+  @keyframes star{0%{transform:scale(0) rotate(-40deg)}70%{transform:scale(1.35) rotate(8deg)}100%{transform:scale(1)}}
+  @keyframes star2{0%{transform:translateY(-10px) scale(0) rotate(-40deg)}70%{transform:translateY(-10px) scale(1.5) rotate(8deg)}100%{transform:translateY(-10px) scale(1.15)}}
+  @keyframes nudge{50%{transform:scale(1.07)}}
+  h1{animation:drop .7s cubic-bezier(.3,.7,.3,1) both}
+  .sheet{animation:pop .28s ease-out both}
+  .stars>i{animation:star .45s ease-out both}
+  .stars>i:nth-child(1){animation-delay:.15s}
+  .stars>i:nth-child(2){animation:star2 .45s ease-out .45s both}
+  .stars>i:nth-child(3){animation-delay:.75s}
+  .lv.cur{animation:nudge 1.4s ease-in-out infinite}
+  @media (prefers-reduced-motion:reduce){h1,.sheet,.stars>i,.stars>i:nth-child(2),.lv.cur{animation:none}}
+  @media (max-height:600px){h1{font-size:46px}.btns{gap:9px}.big{padding-top:6px;padding-bottom:6px}.mid{padding:5px 4px}}
 </style>
 </head>
 <body>
+<div id="bg"><div id="bgImg"></div></div>
 <div id="hud" class="hidden">
   <div id="hudRow">
     <span class="pill" id="hLevel">Level 1</span>
-    <span class="pill" id="hLives">❤️❤️❤️</span>
-    <span class="pill" id="hApples">🍎 0</span>
+    <span class="pill" id="hLives"></span>
+    <span class="pill" id="hApples"></span>
   </div>
   <div id="bar"><div id="barFill"></div></div>
   <span class="pill hidden" id="hPow" style="display:inline-block;margin-top:8px"></span>
@@ -118,16 +190,18 @@
 <div class="overlay hidden" id="levels">
   <div id="levelsHead">
     <button class="small" id="levelsBack">◀ Geri</button>
-    <h2 style="font-size:32px">Leveller</h2>
-    <b id="levelsStars" style="width:70px;text-align:right;font-size:18px"></b>
+    <h2>Leveller</h2>
+    <b id="levelsStars" style="width:70px;text-align:right"></b>
   </div>
   <div id="grid"></div>
 </div>
 
-<div class="overlay dim hidden" id="win">
-  <h2 id="winTitle">Level 1 bitti!</h2>
-  <div class="stars" id="winStars"></div>
-  <div class="stats" id="winStats"></div>
+<div class="overlay hidden" id="win">
+  <div>
+    <h2 id="winTitle">Level 1 bitti!</h2>
+    <div class="stars" id="winStars"></div>
+    <div id="winStats"></div>
+  </div>
   <div class="btns">
     <button class="big" id="nextBtn">Sonraki Level</button>
     <button class="big alt" id="winLevelsBtn">Leveller</button>
@@ -135,12 +209,15 @@
 </div>
 
 <div class="overlay dim hidden" id="lose">
+<div class="sheet">
+  <img class="pose" src="art/kunduz-dizzy.webp" alt="" onerror="this.remove()">
   <h2 id="loseTitle">Canların bitti!</h2>
   <div class="stats" id="loseStats">Hiç sorun değil, bir daha dene!</div>
   <div class="btns">
     <button class="big" id="retryBtn">Tekrar Dene</button>
     <button class="big alt" id="loseLevelsBtn">Leveller</button>
   </div>
+</div>
 </div>
 
 <div class="overlay hidden" id="shop">
@@ -156,6 +233,7 @@
 </div>
 
 <div class="overlay dim hidden" id="admin">
+<div class="sheet">
   <h2>Ebeveyn Ayarları</h2>
   <div class="stats" id="admInfo"></div>
   <div class="btns">
@@ -165,10 +243,12 @@
     <button class="big" id="admClose">Kapat</button>
   </div>
 </div>
+</div>
 
 <div class="overlay dim hidden" id="pause">
+<div class="sheet">
   <h2>Duraklatıldı</h2>
-  <div class="btns" style="margin-top:18px">
+  <div class="btns">
     <button class="big" id="resumeBtn">▶ Devam Et</button>
     <button class="big alt" id="restartBtn">↻ Baştan Başla</button>
     <button class="big alt" id="pauseLevelsBtn">🗺️ Leveller</button>
@@ -176,11 +256,15 @@
     <button class="small" id="pauseMuteBtn">🔊 Ses: Açık</button>
   </div>
 </div>
+</div>
 
 <div class="overlay dim hidden" id="sleep">
-  <h2>Kunduz yoruldu 😴</h2>
+<div class="sheet">
+  <img class="pose" src="art/kunduz-sleep.webp" alt="" onerror="this.remove()">
+  <h2>Kunduz yoruldu</h2>
   <div class="stats">Bugünlük bu kadar yeter.<br>Yarın devam edelim!</div>
-  <button class="big" id="sleepOk">Tamam</button>
+  <div class="btns"><button class="big" id="sleepOk">Tamam</button></div>
+</div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -289,14 +373,18 @@ const G_ = (key, make) => geoCache[key] || (geoCache[key] = make());
 // worlds
 // =====================================================================
 const WORLDS = [
-  { name: 'Bahçe',  emoji: '🌸', sky: ['#6cc3f5','#bfe6fb','#f2fbff'], fog: 0xd8f0fb, hemi: [0xffffff, 0x9ac78a, 0.85], sun: 0.75,
-    roads: ['candy','grass','wood'], palette: [0xff8fb1,0xffc94a,0x7fd8a8,0x7cc4ff,0xc5a0ff], ground: 0x7fcf6a, groundY: -34, clouds: 1, decor: 'garden' },
-  { name: 'Orman',  emoji: '🌲', sky: ['#5aaee0','#a8dcef','#e3f5e6'], fog: 0xcfe8dc, hemi: [0xffffff, 0x6a9a5a, 0.85], sun: 0.75,
-    roads: ['wood','grass','stone'], palette: [0x8fd16a,0xc9a26b,0x6bbf8a,0xe0c070], ground: 0x3f8f4a, groundY: -34, clouds: 1, decor: 'forest' },
-  { name: 'Kumsal', emoji: '🏖️', sky: ['#3fb6f0','#9ee0f7','#fff4d6'], fog: 0xf3ecd6, hemi: [0xffffff, 0xe8d3a0, 0.9], sun: 0.8,
-    roads: ['sand','wood','candy'], palette: [0xffd27a,0xff9e7a,0x7fd8e8,0xffe9a8], ground: 0x2fa8d8, groundY: -14, clouds: 1, decor: 'beach' },
-  { name: 'Deniz',  emoji: '🌊', sky: ['#2f9fe0','#86d0f5','#d9f3ff'], fog: 0xbfe6f7, hemi: [0xffffff, 0x5fb0d0, 0.9], sun: 0.75,
-    roads: ['wood','glass','candy'], palette: [0x7fd0ff,0x9ff0e0,0xffffff,0x5fb8ff], ground: 0x1f86c8, groundY: -9, clouds: 1, decor: 'sea' },
+  { name: 'Bahçe',  emoji: '🌸', sky: ['#59c1cc','#8fd6dc','#f6cfcb'], fog: 0xf6cfcb, hemi: [0xffffff, 0xf2b8c8, 0.9], sun: 0.7,
+    roads: ['candy','candy','candy'], palette: [0xff8fb1,0xffc94a,0x7fd8a8,0x7cc4ff,0xc5a0ff], roadPal: [0xb86e8f,0xc98aa6,0xb2688c],
+    ground: 0xf6c4c6, groundY: -34, clouds: 1, decor: 'garden', art: 'bahce' },
+  { name: 'Orman',  emoji: '🌲', sky: ['#88e1db','#b5ecdf','#c9efe0'], fog: 0xc9efe0, hemi: [0xffffff, 0xb8e8b0, 0.9], sun: 0.7,
+    roads: ['candy','candy','candy'], palette: [0x8fd16a,0xc9a26b,0x6bbf8a,0xe0c070], roadPal: [0x3a9670,0x47a47f,0x358c68],
+    ground: 0xb8e8a8, groundY: -34, clouds: 1, decor: 'forest', art: 'orman' },
+  { name: 'Kumsal', emoji: '🏖️', sky: ['#73c3fc','#a2d8fd','#fdebc5'], fog: 0xfdebc5, hemi: [0xffffff, 0xf6dca0, 0.9], sun: 0.7,
+    roads: ['candy','candy','candy'], palette: [0xffd27a,0xff9e7a,0x7fd8e8,0xffe9a8], roadPal: [0x4a8ca6,0x5496ae,0x46849c],
+    ground: 0xfbe8b8, groundY: -14, clouds: 1, decor: 'beach', art: 'kumsal' },
+  { name: 'Deniz',  emoji: '🌊', sky: ['#b0d9fc','#c4e1f8','#8fe1ec'], fog: 0x8fe1ec, hemi: [0xffffff, 0xd8c8f0, 0.9], sun: 0.7,
+    roads: ['candy','candy','candy'], palette: [0x7fd0ff,0x9ff0e0,0xffffff,0x5fb8ff], roadPal: [0xc0707c,0xcc7c88,0xb86874],
+    ground: 0x8fe1ec, groundY: -9, clouds: 1, decor: 'sea', art: 'deniz' },
   { name: 'Dağ',    emoji: '⛰️', sky: ['#4f9bd8','#a9cfee','#eef5fb'], fog: 0xdde9f3, hemi: [0xffffff, 0x8a9aa8, 0.85], sun: 0.75,
     roads: ['stone','snow','wood'], palette: [0xb8c4d0,0xd8e2ea,0x9fb0be], ground: 0x6f8f6a, groundY: -44, clouds: 1, decor: 'mountain' },
   { name: 'Şehir',  emoji: '🏙️', sky: ['#ff9a6a','#ffc79a','#ffe9d0'], fog: 0xf6d9c4, hemi: [0xfff0e0, 0x8a7a9a, 0.85], sun: 0.7,
@@ -432,10 +520,149 @@ function updateForm(dt){
   hide.visible = k < 0.5; hide.scale.setScalar(Math.max(0.01, 1 - k*1.8));
   show.visible = k >= 0.35; show.scale.setScalar(Math.max(0.01, (k - 0.35) / 0.65) * pop);
 }
+const shadowTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
 const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 24),
-  basic(0x000000, { transparent: true, opacity: 0.25, depthWrite: false }));
+  basic(0x5a2a3a, { map: shadowTex, transparent: true, opacity: 0.25, depthWrite: false }));
 shadow.rotation.x = -Math.PI / 2;
 scene.add(shadow);
+
+// =====================================================================
+// picture art: beaver poses and garden pieces (files in art/).
+// If a picture fails to load, the 3D beaver / plain scenery above is used instead.
+// =====================================================================
+const ART = 'art/';
+const artLoader = new THREE.TextureLoader();
+const POSE = { stand: [407,535], wave: [428,523], jump: [439,544], dizzy: [436,443] };
+const POSE_PX = 369;   // picture pixels per world unit (standing beaver = 1.45 tall)
+const poseTex = {}, poseTuy = {}; let posesLoaded = 0, poseFail = false;
+Object.keys(POSE).forEach(k => {
+  artLoader.load(ART + 'kunduz-' + k + '.webp', t => { poseTex[k] = t; posesLoaded++; }, undefined, () => { poseFail = true; });
+  artLoader.load(ART + 'kunduz-' + k + '-tuy.webp', t => { poseTuy[k] = t; });
+});
+const picReady = () => !poseFail && posesLoaded === 4;
+const beaverPic = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, fog: false }));
+beaverPic.visible = false; beaver.squash.add(beaverPic);
+// fur colour from the shop: a grey copy of only the fur, tinted and laid on top (eyes, teeth, nose stay as they are)
+const beaverTint = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthWrite: false, fog: false }));
+beaverTint.visible = false; beaverTint.renderOrder = 1; beaver.squash.add(beaverTint);
+
+// rolling ball: the beaver picture wrapped on a real sphere that rolls forward (tail tucked in, like a curled-up beaver)
+const picBall = new THREE.Group(); picBall.visible = false; beaver.squash.add(picBall);
+const picSpinG = new THREE.Group(); picSpinG.position.y = -R * 0.05; picBall.add(picSpinG);
+const BR = R * 0.95;   // sphere a bit smaller; the fluffy edge picture goes around it
+const topTint = new THREE.MeshLambertMaterial({ transparent: true, depthWrite: false, visible: false });
+let topReady = false;
+picSpinG.add(new THREE.Mesh(new THREE.SphereGeometry(BR, 40, 28),
+  new THREE.MeshLambertMaterial({ color: 0xd9d9d9, map: artLoader.load(ART + 'kunduz-top.webp', () => { topReady = true; }) })));
+const topTintMesh = new THREE.Mesh(new THREE.SphereGeometry(BR * 1.004, 40, 28), topTint);
+topTintMesh.renderOrder = 1; picSpinG.add(topTintMesh);
+artLoader.load(ART + 'kunduz-top-tuy.webp', t => { topTint.map = t; topTint.needsUpdate = true; });
+const ballRim = new THREE.Sprite(new THREE.SpriteMaterial({ map: artLoader.load(ART + 'kunduz-top-kenar.webp'), transparent: true, depthWrite: false, fog: false }));
+ballRim.scale.setScalar(BR * 2 * 1.10); ballRim.position.y = picSpinG.position.y; picBall.add(ballRim);
+let rollAng = 0, rollLean = 0;
+const turnE = new THREE.Euler();
+function ballTurn(q, h){ q.setFromEuler(turnE.set(rollAng, -h, rollLean, 'YZX')); }   // face the road, then roll forward
+let picPose = '', picSpin = 0, wearPic = null;
+const WHITE = new THREE.Color(0xffffff), tintCol = new THREE.Color();
+function updateBeaverPic(dt, h){
+  if (!picReady()) return;
+  beaver.stand.visible = false;
+  const m = beaverPic.material;
+  const tinted = !!save.wear.fur && furMats.length > 0;
+  if (tinted) tintCol.copy(furMats[0].color).multiplyScalar(1.5);
+  if (form === 'ball' && !(state === 'play' && ball.falling) && state !== 'win' && topReady){
+    beaver.ball.visible = false; beaverPic.visible = false; beaverTint.visible = false; picBall.visible = true;
+    picBall.scale.setScalar(Math.max(0.3, beaver.ball.scale.x));
+    ballTurn(picSpinG.quaternion, h);
+    topTint.visible = tinted; if (tinted) topTint.color.copy(tintCol);
+    if (wearPic){ wearPic.visible = true; wearPic.position.y = 0.8; }
+    picPose = ''; return;
+  }
+  picBall.visible = false; beaver.ball.visible = false; beaverPic.visible = true;
+  let pose = 'stand', rot = 0, cy = 0, y = -R, sx = 1, sy = 1;
+  if (state === 'play' && ball.falling){ pose = 'dizzy'; cy = 0.5; y = 0.1; picSpin += dt * 7; rot = picSpin; }
+  else if (state === 'win'){ pose = ball.y > R + 0.05 ? 'jump' : 'stand'; }
+  else if (state === 'menu'){
+    pose = (menuT % 5) < 1.6 ? 'wave' : 'stand';
+    sy = 1 + Math.sin(menuT * 2.2) * 0.02; sx = 1 - Math.sin(menuT * 2.2) * 0.008;
+  }
+  if (pose !== 'dizzy') picSpin = 0;
+  if (pose !== picPose){ picPose = pose; m.map = poseTex[pose]; m.needsUpdate = true;
+    const tm = beaverTint.material; tm.map = poseTuy[pose] || null; tm.needsUpdate = true; }
+  m.rotation = rot;
+  beaverPic.center.set(0.5, cy);
+  beaverPic.position.set(0, y, 0);
+  beaverPic.scale.set(POSE[pose][0] / POSE_PX * sx, POSE[pose][1] / POSE_PX * sy, 1);
+  beaverTint.visible = tinted && !!poseTuy[pose];
+  if (beaverTint.visible){
+    beaverTint.material.color.copy(tintCol); beaverTint.material.rotation = rot;
+    beaverTint.center.copy(beaverPic.center); beaverTint.position.copy(beaverPic.position); beaverTint.scale.copy(beaverPic.scale);
+  }
+  if (wearPic){ wearPic.visible = pose !== 'dizzy'; wearPic.position.y = (pose === 'jump' ? 1.22 : 1.14); }
+}
+// worn shop items shown as small icons above the picture beaver
+function updateWearPic(){
+  if (wearPic) beaver.root.remove(wearPic);
+  wearPic = new THREE.Group();
+  const worn = ['hat','face','neck'].map(sl => SHOP.find(x => x.id === save.wear[sl])).filter(Boolean);
+  worn.forEach((it, i) => { const sp = emojiSprite(it.icon, 0.36); sp.material.depthWrite = false; sp.position.x = (i - (worn.length - 1) / 2) * 0.38; wearPic.add(sp); });
+  wearPic.visible = false;
+  beaver.root.add(wearPic);
+}
+
+// picture sets: landscape art/<set>.jpg plus pieces art/<set>-<piece>.webp (sizes in pixels)
+// big: one tall piece per island; small: up to three around it; hop: pieces that jump now and then
+const ARTSET = {
+  bahce: { pieces: { lolipop: [226,356], cam: [257,356], mantar: [266,297], cicek: [240,288], cali: [278,218], bulut: [300,194] },
+    big: ['lolipop', 'cam'], small: ['mantar', 'cicek', 'cali'], hop: [], islands: [0xf9b8cf, 0xbfe6c8, 0xfbe0b0], butterflies: true },
+  orman: { pieces: { cam: [252,356], mantar: [286,300], sincap: [291,300], cali: [347,300], kutuk: [345,300], bulut: [416,300] },
+    big: ['cam', 'cam', 'mantar'], small: ['cali', 'kutuk', 'sincap'], hop: ['sincap'], islands: [0xb8e8a8, 0xd8f0c0, 0xf3e3c0], butterflies: true },
+  kumsal: { pieces: { palmiye: [289,356], semsiye: [334,356], yengec: [346,300], kabuk: [196,300], kale: [314,300], bulut: [431,300] },
+    big: ['palmiye', 'palmiye', 'semsiye'], small: ['kale', 'kabuk', 'yengec'], hop: ['yengec'], size: { kabuk: 0.6, yengec: 0.7 },
+    islands: [0xfbe8b8, 0xf6dca0, 0xfff0d0], butterflies: false },
+  deniz: { pieces: { mercan: [328,356], yosun: [362,356], ahtapot: [330,300], denizyildizi: [306,300], istiridye: [290,300], bulut: [405,300] },
+    big: ['mercan', 'mercan', 'yosun'], small: ['denizyildizi', 'istiridye', 'ahtapot'], hop: ['ahtapot'], size: { denizyildizi: 0.65, istiridye: 0.75, ahtapot: 0.85 },
+    islands: [0xd8c8f0, 0xf6c8d8, 0xc8e0f6], butterflies: false }
+};
+const artMat = {};   // artMat[set][piece] = three materials, so neighbours sway out of step
+const cloudPicMat = new THREE.SpriteMaterial({ alphaTest: 0.4, visible: false, fog: false });
+function loadArtSet(name){
+  if (artMat[name]) return;
+  const set = ARTSET[name]; artMat[name] = {};
+  Object.keys(set.pieces).forEach(k => {
+    artMat[name][k] = [0, 1, 2].map(() => new THREE.SpriteMaterial({ alphaTest: 0.4, visible: false, fog: false }));
+    artLoader.load(ART + name + '-' + k + '.webp', t => {
+      artMat[name][k].forEach(m => { m.map = t; m.visible = true; m.needsUpdate = true; });
+      if (k === 'bulut') applyCloudArt();
+    });
+  });
+}
+loadArtSet('bahce');
+function artPiece(name, k, h, ph){
+  const sp = new THREE.Sprite(artMat[name][k][ph % 3]), px = ARTSET[name].pieces[k];
+  sp.center.set(0.5, 0.03); sp.scale.set(h * px[0] / px[1], h, 1);
+  return sp;
+}
+function applyCloudArt(){
+  const set = world && world.art && artMat[world.art], cm = set && set.bulut && set.bulut[0];
+  const on = !!(cm && cm.visible);
+  if (on){ cloudPicMat.map = cm.map; cloudPicMat.visible = true; cloudPicMat.needsUpdate = true;
+    const px = ARTSET[world.art].pieces.bulut;
+    clouds.forEach(c => c.children.forEach(ch => { if (ch.isSprite) ch.scale.x = ch.scale.y * px[0] / px[1]; })); }
+  clouds.forEach((c, i) => { c.children.forEach(ch => { ch.visible = ch.isSprite ? on : !on; }); if (world && world.art && i % 5 > 1) c.visible = false; });   // fewer picture clouds
+}
+const bgEl = document.getElementById('bg'), bgImg = document.getElementById('bgImg');
+let bgPan = -1;
+function updateArt(dt, heading){
+  const am = world.art && artMat[world.art];
+  if (am) for (const k in am){ if (k !== 'bulut') am[k].forEach((m, i) => { m.rotation = Math.sin(time * 1.3 + i * 2.1) * 0.05; }); }
+  if (!world.art) return;
+  clouds.forEach(c => { c.position.x += dt * 0.5; });
+  const pan = Math.round(clamp(50 + Math.sin(heading) * 44 + ball.lat * 1.2, 0, 100) * 5) / 5;
+  if (pan !== bgPan){ bgPan = pan; bgImg.style.backgroundPositionX = pan + '%'; }
+}
 
 // =====================================================================
 // fish (from the drawing)
@@ -785,14 +1012,37 @@ function obstacleMesh(type, wi){
 // =====================================================================
 // pickups
 // =====================================================================
+const ITEM = { elma: [175,192], altin: [191,192], kalp: [227,192], yildiz: [197,192], yuva: [347,300], bayrak: [251,300] };
+const itemOK = {}, itemWait = {}, itemTex = {};
+const itemLoader = new THREE.TextureLoader();
+Object.keys(ITEM).forEach(k => {
+  itemWait[k] = [];
+  itemLoader.load('art/parca-' + k + '.webp', t => {
+    itemTex[k] = t; itemOK[k] = true;
+    itemWait[k].forEach(o => { o.visible = false; }); itemWait[k] = [];   // tell waiting sprites
+  });
+});
+// picture sprite of height h (own material, so it can sway and fade); fb = the old 3D shape,
+// kept only until the picture has loaded
+function itemSprite(k, h, fb){
+  const m = new THREE.SpriteMaterial({ alphaTest: 0.35, fog: false, transparent: true });
+  const sp = new THREE.Sprite(m);
+  const show = () => { m.map = itemTex[k]; m.visible = true; m.needsUpdate = true; if (fb) fb.visible = false; };
+  if (itemOK[k]) show(); else { m.visible = false; itemWait[k].push({ set visible(v){ show(); } }); }
+  sp.scale.set(h * ITEM[k][0] / ITEM[k][1], h, 1);
+  sp.userData.k = k; sp.userData.h = h;
+  return sp;
+}
 const appleGeo = new THREE.SphereGeometry(0.28, 16, 12), appleMat = lam(0xe8333a);
 const stemGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.14, 6), stemMat = lam(0x5b3a1a);
 const leafGeo = new THREE.SphereGeometry(0.09, 8, 6), leafMat = lam(0x3fbf5a);
-function makeApple(){
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(appleGeo, appleMat));
-  const st = new THREE.Mesh(stemGeo, stemMat); st.position.y = 0.3; g.add(st);
-  const lf = new THREE.Mesh(leafGeo, leafMat); lf.scale.set(1.4, 0.4, 0.8); lf.position.set(0.1, 0.33, 0); g.add(lf);
+function makeApple(gold){
+  const g = new THREE.Group(), fb = new THREE.Group(); g.add(fb);
+  fb.add(new THREE.Mesh(appleGeo, gold ? goldMat : appleMat));
+  const st = new THREE.Mesh(stemGeo, stemMat); st.position.y = 0.3; fb.add(st);
+  const lf = new THREE.Mesh(leafGeo, leafMat); lf.scale.set(1.4, 0.4, 0.8); lf.position.set(0.1, 0.33, 0); fb.add(lf);
+  const sp = itemSprite(gold ? 'altin' : 'elma', 0.66, fb); sp.position.y = 0.03; g.add(sp);
+  g.userData.sp = sp;
   return g;
 }
 const heartShape = new THREE.Shape();
@@ -802,10 +1052,11 @@ heartShape.bezierCurveTo(0.35, 0.5, 0.6, 0.05, 0, -0.35);
 const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.16, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 });
 heartGeo.center();
 function makeHeart(){
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(heartGeo, lam(0xff3a6a, { emissive: 0x5a0a1a })));
+  const g = new THREE.Group(), fb = new THREE.Group(); g.add(fb);
+  fb.add(new THREE.Mesh(heartGeo, lam(0xff3a6a, { emissive: 0x5a0a1a })));
   const glow = new THREE.Mesh(G_('hglow', () => new THREE.SphereGeometry(0.55, 14, 10)), basic(0xff9ab8, { transparent: true, opacity: 0.25 }));
-  g.add(glow);
+  fb.add(glow);
+  const sp = itemSprite('kalp', 0.62, fb); g.add(sp); g.userData.sp = sp;
   g.scale.setScalar(1.3);
   return g;
 }
@@ -840,6 +1091,8 @@ for (let k = 0; k < 30; k++){
     const p = new THREE.Mesh(cloudGeo, cloudMat), s = 1 + Math.random()*1.4;
     p.scale.set(s*1.3, s*0.8, s); p.position.set(j*1.6 - n*0.8, Math.random()*0.6, (Math.random()-0.5)*1.2); c.add(p);
   }
+  const pic = new THREE.Sprite(cloudPicMat); const ps = 3 + Math.random() * 2.5;
+  pic.scale.set(ps * 1.5, ps, 1); pic.visible = false; c.add(pic);
   scene.add(c); clouds.push(c);
 }
 const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(900, 900), lam(0x7fcf6a));
@@ -924,10 +1177,23 @@ function buildDecor(rng){
       const lat = side * (8 + rng() * 22), y0 = -3 - rng() * 9;
       const p = worldAt(s + rng()*6, lat, y0);
       let o = null;
-      if (wd === 'garden'){
-        o = island(0x6fcf5a, 1.6 + rng()*1.5);
-        for (let k = 0; k < 4; k++){ const f = flower([0xff8fb1, 0xffffff, 0xc5a0ff, 0xff6a6a][k]); f.position.set((rng()-0.5)*2, 0.25, (rng()-0.5)*2); o.add(f); }
-        if (rng() < 0.5){ // butterfly
+      if (world.art && ARTSET[world.art]){
+        const an = world.art, set = ARTSET[an], ir = 1.8 + rng()*1.6;
+        loadArtSet(an);
+        o = island(set.islands[Math.floor(rng()*set.islands.length)], ir);
+        const big = artPiece(an, set.big[Math.floor(rng()*set.big.length)], 4.4 + rng()*2.8, Math.floor(rng()*3));
+        big.position.set((rng()-0.5)*1.2, 0.2, (rng()-0.5)*1.2); o.add(big);
+        set.small.forEach((k, i) => {
+          if (rng() < 0.2) return;
+          const sm = artPiece(an, k, (1.3 + rng()*1.1) * ((set.size && set.size[k]) || 1), i + Math.floor(rng()*3));
+          const a = rng() * Math.PI * 2, d = ir * 0.62 * Math.sqrt(rng());
+          sm.position.set(Math.cos(a) * d, 0.2, Math.sin(a) * d); o.add(sm);
+          if (set.hop.includes(k)){   // little hop every few seconds
+            const ph = rng() * 6, by = 0.2;
+            decorAnims.push(t => { const q = (t * 0.7 + ph) % 3; sm.position.y = by + (q < 0.5 ? Math.sin(q / 0.5 * Math.PI) * 0.5 : 0); });
+          }
+        });
+        if (set.butterflies && rng() < 0.5){ // butterfly
           const b = new THREE.Group(); const col = [0xff8fd0, 0xffd23a, 0x7cc4ff][Math.floor(rng()*3)];
           [-1,1].forEach(sd => { const wgt = new THREE.Mesh(G_('bwing', () => new THREE.CircleGeometry(0.35, 12)), dm('bw' + col, () => lam(col, { side: THREE.DoubleSide })));
             wgt.position.x = sd*0.3; wgt.rotation.x = -Math.PI/2; const piv = new THREE.Group(); piv.add(wgt); piv.userData.sd = sd; b.add(piv); });
@@ -980,6 +1246,7 @@ function buildDecor(rng){
         const tex = windowTex.clone(); tex.needsUpdate = true; tex.repeat.set(Math.max(1, Math.round(w/3)), Math.round(h/6));
         const bmat = lam(0xffffff, { map: tex });
         const b = new THREE.Mesh(G_('bld', () => new THREE.BoxGeometry(1, 1, 1)), bmat); b.scale.set(w, h, w); b.position.y = h/2; o.add(b);
+        o.userData.trash = [tex, bmat];
         const roof = new THREE.Mesh(G_('bld', () => new THREE.BoxGeometry(1, 1, 1)), dm('roof', () => lam(0x3a4050))); roof.scale.set(w*1.02, 0.6, w*1.02); roof.position.y = h; o.add(roof);
         if (rng() < 0.4){ const ant = new THREE.Mesh(G_('ant', () => new THREE.CylinderGeometry(0.08, 0.08, 4, 6)), dm('roof', () => lam(0x3a4050))); ant.position.y = h + 2; o.add(ant);
           const bl = new THREE.Mesh(G_('blink', () => new THREE.SphereGeometry(0.25, 8, 6)), dm('redl', () => basic(0xff3030))); bl.position.y = h + 4.1; o.add(bl); }
@@ -1028,12 +1295,15 @@ function applyWorldLook(){
   scene.fog.color.setHex(w.fog);
   hemi.color.setHex(w.hemi[0]); hemi.groundColor.setHex(w.hemi[1]); hemi.intensity = w.hemi[2];
   sun.intensity = w.sun;
-  groundMesh.visible = w.ground !== null;
+  groundMesh.visible = w.ground !== null && !w.art;   // art worlds show the painted land instead
   if (w.ground !== null){
     groundMesh.material = w.decor === 'volcano' ? basic(w.ground) : lam(w.ground);
     groundMesh.position.y = w.groundY;
   }
   clouds.forEach(c => { c.visible = !!w.clouds; });
+  applyCloudArt();
+  bgEl.style.display = w.art ? 'block' : 'none';
+  if (w.art){ loadArtSet(w.art); document.body.style.background = 'transparent'; bgImg.style.backgroundImage = 'url(' + ART + w.art + '.jpg)'; bgEl.style.backgroundColor = '#' + w.fog.toString(16).padStart(6, '0'); }
   cloudMat.color.setHex(w.decor === 'winter' ? 0xe8eef4 : 0xffffff);
   stars.visible = w.decor === 'space';
   snow.visible = w.decor === 'winter';
@@ -1047,7 +1317,7 @@ function applyWorldLook(){
 // level generation
 // =====================================================================
 function clearLevel(){
-  levelObjs.forEach(o => { scene.remove(o); if (o.userData.ownGeo) o.geometry.dispose(); });
+  levelObjs.forEach(o => { scene.remove(o); if (o.userData.ownGeo) o.geometry.dispose(); if (o.userData.trash) o.userData.trash.forEach(x => x.dispose()); });
   levelObjs = []; obstacles = []; pads = []; pickups = []; blinkTiles = []; movers = []; decorAnims = []; winds = [];
 }
 function addObj(o){ scene.add(o); levelObjs.push(o); return o; }
@@ -1072,7 +1342,7 @@ function buildLevel(n, opt){
   let styleIdx = 0, styleLeft = 6, sinceGap = 0, sinceObs = 0, safe = 0, colorK = 0;
   let beamLeft = 0, windLeft = 0, windDir = 1, sideCount = 0;
   const startRoad = (len, w0, w1, h0, h1, extra) => {
-    const t = Object.assign({ kind: 'road', s0: s, len, w0, w1, h0, h1, style: world.roads[styleIdx], color: world.palette[colorK++ % world.palette.length] }, extra || {});
+    const t = Object.assign({ kind: 'road', s0: s, len, w0, w1, h0, h1, style: world.roads[styleIdx], color: (world.roadPal || world.palette)[colorK++ % (world.roadPal || world.palette).length] }, extra || {});
     tiles.push(t); s += len; return t;
   };
   for (let k = 0; k < 4; k++) startRoad(L, 3.4, 3.4, 0, 0, { start: true });
@@ -1219,9 +1489,10 @@ function buildLevel(n, opt){
         addPickup('gold', sMid, t.side.lat, 0.8);
       }
       if (t.flag){
-        const fg = new THREE.Group();
-        const pole = new THREE.Mesh(G_('fgpole', () => new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8)), dm('white', () => lam(0xffffff))); pole.position.y = 1.1; fg.add(pole);
-        const cloth = new THREE.Mesh(G_('fgcloth', () => new THREE.BoxGeometry(0.7, 0.45, 0.04)), dm('fgcloth', () => lam(0xff3a4a))); cloth.position.set(0.38, 1.9, 0); fg.add(cloth);
+        const old = new THREE.Group();
+        const pole = new THREE.Mesh(G_('fgpole', () => new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8)), dm('white', () => lam(0xffffff))); pole.position.y = 1.1; old.add(pole);
+        const cloth = new THREE.Mesh(G_('fgcloth', () => new THREE.BoxGeometry(0.7, 0.45, 0.04)), dm('fgcloth', () => lam(0xff3a4a))); cloth.position.set(0.38, 1.9, 0); old.add(cloth);
+        const fg = pictureFlag(2.2, old);
         place(fg, flagS, -(wMid / 2 + 0.2), 0); addObj(fg);
       }
       if (t.pow) addPickup('pow', sMid, 0, 0.9, null, t.pow);
@@ -1258,10 +1529,10 @@ function addPickup(type, s, lat, y, scale, kind){
   if (type === 'heart') m = makeHeart();
   else if (type === 'pow') m = emojiSprite(POW[kind].icon, 0.95);
   else if (type === 'friend') m = emojiSprite(kind, 0.95);
-  else { m = makeApple(); if (type === 'gold'){ m.children[0].material = goldMat; m.scale.setScalar(1.4); } }
+  else { m = makeApple(type === 'gold'); if (type === 'gold') m.scale.setScalar(1.4); }
   if (scale) m.scale.setScalar(scale);
   place(m, s, lat, y); addObj(m);
-  pickups.push({ type, kind, s, lat, y, mesh: m, taken: false, ph: Math.random() * 6 });
+  pickups.push({ type, kind, s, lat, y, mesh: m, taken: false, ph: Math.random() * 6, base: m.scale.x, popT: 0 });
   if (type === 'apple') totalApples++;
 }
 function addObstacle(type, t, wi, rng){
@@ -1282,8 +1553,29 @@ function addObstacle(type, t, wi, rng){
   if (type === 'hopper'){ o.lat = (rng() - 0.5) * Math.max(0, wMid - 0.9 * k); o.freq = 1.6 + rng() * 0.6; }
   obstacles.push(o);
 }
+// waving picture flag (pole on the left stays still, the cloth ripples)
+const flagGeo = new THREE.PlaneGeometry(ITEM.bayrak[0] / ITEM.bayrak[1], 1, 18, 1); flagGeo.translate(ITEM.bayrak[0] / ITEM.bayrak[1] / 2 - 0.12, 0.5, 0);
+const flagX0 = Float32Array.from(flagGeo.attributes.position.array);
+const flagMat = new THREE.MeshBasicMaterial({ transparent: true, alphaTest: 0.35, side: THREE.DoubleSide, visible: false });
+itemLoader.load('art/parca-bayrak.webp', t => { flagMat.map = t; flagMat.visible = true; flagMat.needsUpdate = true; });
+function waveFlags(t){
+  const p = flagGeo.attributes.position, a = p.array, wTot = ITEM.bayrak[0] / ITEM.bayrak[1];
+  for (let i = 0; i < p.count; i++){
+    const x = flagX0[i * 3], u = (x + 0.12) / wTot, k = clamp((u - 0.24) / 0.76, 0, 1);
+    a[i * 3 + 2] = Math.sin(u * 7 - t * 5) * 0.07 * k;
+    a[i * 3 + 1] = flagX0[i * 3 + 1] + Math.sin(u * 5 - t * 5 + 1) * 0.03 * k;
+  }
+  p.needsUpdate = true;
+}
+// flag of height h; the old 3D flag stays until the picture loads
+function pictureFlag(h, fb){
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(flagGeo, flagMat); m.scale.setScalar(h); g.add(m);
+  if (fb){ g.add(fb); if (flagMat.visible) fb.visible = false; else itemWait.bayrak.push({ set visible(v){ fb.visible = false; } }); }
+  return g;
+}
 const finishTex = canvasTex(256, 64, (g, w, h) => {
-  for (let x = 0; x < w; x += 16) for (let y = 0; y < h; y += 16){ g.fillStyle = ((x + y) / 16) % 2 ? '#222' : '#fff'; g.fillRect(x, y, 16, 16); }
+  for (let x = 0; x < w; x += 16) for (let y = 0; y < h; y += 16){ g.fillStyle = ((x + y) / 16) % 2 ? '#f4a3c4' : '#fff6f0'; g.fillRect(x, y, 16, 16); }
   g.fillStyle = '#ffcf3f'; g.fillRect(56, 12, 144, 40);
   g.fillStyle = '#6a4319'; g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('BİTİŞ', 128, 33);
@@ -1291,8 +1583,9 @@ const finishTex = canvasTex(256, 64, (g, w, h) => {
 function buildFinishArch(t){
   const grp = new THREE.Group();
   const w = t.w0;
-  [-1, 1].forEach(side => { const p = new THREE.Mesh(G_('fpost', () => new THREE.CylinderGeometry(0.12, 0.12, 2.6, 10)), lam(0xffffff)); p.position.set(side*(w/2 + 0.15), 1.3, 0); grp.add(p); });
-  const dark = lam(0x222222), fm = lam(0xffffff, { map: finishTex });
+  [-1, 1].forEach(side => { const p = new THREE.Mesh(G_('fpost', () => new THREE.CylinderGeometry(0.12, 0.12, 2.6, 10)), lam(0xfff6f0)); p.position.set(side*(w/2 + 0.15), 1.3, 0); grp.add(p);
+    const fl = pictureFlag(1.9); fl.position.set(side * (w/2 + 0.75), 0, 0.2); if (side < 0) fl.scale.x = -1; grp.add(fl); });   // flags wave outwards
+  const dark = lam(0xe0789f), fm = lam(0xffffff, { map: finishTex });
   const banner = new THREE.Mesh(new THREE.BoxGeometry(w + 0.5, 0.7, 0.08), [dark, dark, dark, dark, fm, fm]);
   banner.position.y = 2.45; grp.add(banner);
   place(grp, t.s0, 0, 0); addObj(grp);
@@ -1469,7 +1762,8 @@ function accGroup(a){
 }
 let accS = null, accB = null, trailItem = null, trailT = 0;
 function applyCostume(){
-  if (accS){ beaver.stand.remove(accS); beaver.ball.remove(accB); }
+  if (accS){ beaver.stand.remove(accS); beaver.ball.remove(accB);
+    [accS, accB].forEach(g => g.traverse(o => { if (o.isMesh){ o.geometry.dispose(); (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); } })); }
   accS = accGroup(ANCH_S); accB = accGroup(ANCH_B);
   beaver.stand.add(accS); beaver.ball.add(accB);
   trailItem = SHOP.find(x => x.id === save.wear.trail) || null;
@@ -1477,6 +1771,7 @@ function applyCostume(){
   const col = new THREE.Color(it ? it.color : FUR);
   furMats.forEach(m => m.color.copy(col));
   furDark.forEach(m => m.color.copy(col).multiplyScalar(0.72));
+  updateWearPic();
 }
 applyCostume();
 const shieldMesh = new THREE.Mesh(new THREE.SphereGeometry(0.72, 18, 14), basic(0x7cd8ff, { transparent: true, opacity: 0.3, depthWrite: false }));
@@ -1493,6 +1788,9 @@ function houseGroup(st){
   };
   log(1.3, 0.37, 0.9, 0.9); log(1.3, 0.37, 1.15, 0.9); log(1.3, 0.58, 1.02, 0.9);
   if (st >= 2) for (let k = 0; k < 6; k++) log(-1.5 + k * 0.28, 0.5, -1.3, 0.55 + (k % 2) * 0.12, true);
+  const lodge = st >= 3 ? new THREE.Group() : null;   // old 3D house parts go here; the picture lodge replaces them once loaded
+  const gAdd = g.add.bind(g);
+  if (lodge){ g.add(lodge); g.add = o => lodge.add(o); }
   if (st >= 3){ const d = new THREE.Mesh(G_('hdome', () => new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2)), dm('hdome', () => lam(0x8a5a2e))); d.position.set(-0.2, 0.25, 0); g.add(d); }
   if (st >= 4){
     const door = new THREE.Mesh(G_('hdoor', () => new THREE.BoxGeometry(0.4, 0.55, 0.08)), dm('hdoor', () => lam(0x4a2a14))); door.position.set(-0.2, 0.5, 0.97); g.add(door);
@@ -1505,6 +1803,13 @@ function houseGroup(st){
   }
   if (st >= 6) for (let k = 0; k < 5; k++){ const f = flower([0xff8fb1, 0xffffff, 0xc5a0ff, 0xff6a6a, 0xffd23a][k]); f.position.set(-1.6 + k * 0.5, 0.25, 1.5); f.scale.setScalar(0.8); g.add(f); }
   if (st >= 7){ const sg = new THREE.Mesh(G_('hstar', () => new THREE.OctahedronGeometry(0.25)), goldMat); sg.position.set(-0.2, 1.6, 0); g.add(sg); }
+  g.add = gAdd;
+  if (lodge){
+    const hh = 1.7 + (st - 3) * 0.16, sp = itemSprite('yuva', hh, lodge);
+    sp.center.set(0.5, 0.04); sp.position.set(-0.2, 0.2, 0.2); g.add(sp);
+    if (st >= 5){ const fl = itemSprite('bayrak', 1.1); fl.center.set(0.2, 0.02); fl.position.set(0.85, 0.2, 0.5); g.add(fl); }
+    if (st >= 7){ const sg = itemSprite('yildiz', 0.55); sg.position.set(-0.2, 0.25 + hh + 0.25, 0.2); g.add(sg); }
+  }
   return g;
 }
 
@@ -1549,9 +1854,14 @@ function show(id){ OVERLAYS.forEach(x => $(x).classList.toggle('hidden', x !== i
 function updateHud(){
   $('hLevel').textContent = mode === 'endless' ? '∞ ' + Math.floor(endless.base + Math.max(0, ball.s)) + ' m'
     : mode === 'daily' ? '🎁 Günün' : (isBoss ? '👑 ' : world.emoji + ' ') + level;
-  $('hLives').textContent = save.admin ? '❤️ ∞' : '❤️'.repeat(Math.max(0, lives)) + (lives < START_LIVES ? '🤍'.repeat(START_LIVES - lives) : '');
-  $('hApples').textContent = '🍎 ' + apples + (mode === 'endless' ? '' : '/' + totalApples);
+  setHtml('hLives', save.admin ? IC.kalp + ' ∞' : IC.kalp.repeat(Math.max(0, lives)) + (lives < START_LIVES ? IC.kalpOff.repeat(START_LIVES - lives) : ''));
+  setHtml('hApples', IC.elma + ' ' + apples + (mode === 'endless' ? '' : '/' + totalApples));
 }
+// picture icons for the HUD and menus (same pictures as in the game)
+const IC = { elma: '<img class="ic" src="art/parca-elma.webp" alt="🍎">', kalp: '<img class="ic" src="art/parca-kalp.webp" alt="❤️">',
+  kalpOff: '<img class="ic off" src="art/parca-kalp.webp" alt="🤍">', yildiz: '<img class="ic" src="art/parca-yildiz.webp" alt="⭐">' };
+const htmlNow = {};
+function setHtml(id, h){ if (htmlNow[id] !== h){ htmlNow[id] = h; $(id).innerHTML = h; } }
 function updatePowHud(){
   const s = (boss.active ? '😈 ' + Math.max(0, Math.round(ball.s - boss.s - 2.6)) + ' m  ' : '') + (power.kind ? POW[power.kind].icon + ' ' + Math.ceil(power.t) : '') + (power.shield ? ' 🛡️' : '');
   if (s === lastHudPow) return;
@@ -1560,7 +1870,7 @@ function updatePowHud(){
 function placeAtStart(){
   Object.assign(ball, { s: -1.5, lat: 0, y: R, targetLat: 0, vy: 0, rollV: 0, speed: cfg.speed, grounded: true,
     falling: false, coyote: 0, checkpoint: -1.5, invuln: 0, wait: 0, onMover: null });
-  beaver.ball.quaternion.identity();
+  beaver.ball.quaternion.identity(); rollAng = 0; rollLean = 0;
   setForm('stand', true);
   fishes.forEach(f => spawnFish(f, false));
   clouds.forEach(c => placeCloud(c, false));
@@ -1573,7 +1883,7 @@ function goMenu(){
   const hg = houseGroup(houseStage()); place(hg, 8, -3.6, -0.2); hg.rotation.y += 0.6; hg.scale.setScalar(0.6); addObj(hg);
   $('playBtn').textContent = 'Oyna – Level ' + n;
   $('menuWorld').textContent = world.emoji + ' ' + world.name + ' Dünyası';
-  $('menuBank').textContent = '🍎 ' + save.bank + '   ⭐ ' + totalStars();
+  setHtml('menuBank', IC.elma + ' ' + save.bank + ' &nbsp; ' + IC.yildiz + ' ' + totalStars());
   $('dailyBtn').textContent = save.dailyDone === dateStr() ? '🎁 Günün Leveli ✓' : '🎁 Günün Leveli';
   $('hud').classList.add('hidden');
   show('menu');
@@ -1700,8 +2010,9 @@ function winLevel(){
   }
   if (follower){ save.friends[follower.emoji] = (save.friends[follower.emoji] || 0) + 1; extra += '<br>' + follower.emoji + ' arkadaşını kurtardın!'; }
   writeSave();
-  $('winStars').innerHTML = mode === 'daily' ? '🎁' : '★'.repeat(st) + '<span class="off">' + '★'.repeat(3 - st) + '</span>';
-  $('winStats').innerHTML = (save.name ? 'Aferin, ' + esc(save.name) + '!<br>' : '') + '🍎 ' + apples + '/' + totalApples + extra;
+  const starImg = '<i><img src="art/parca-yildiz.webp" alt="★"></i>';
+  $('winStars').innerHTML = mode === 'daily' ? '🎁' : starImg.repeat(st) + '<span class="off">' + starImg.repeat(3 - st) + '</span>';
+  $('winStats').innerHTML = (save.name ? 'Aferin, ' + esc(save.name) + '!<br>' : '') + IC.elma + ' ' + apples + '/' + totalApples + extra;
   $('nextBtn').classList.toggle('hidden', mode !== 'normal' || level >= MAX_LEVEL);
   setTimeout(() => { if (state === 'win') show('win'); }, 1300);
 }
@@ -1724,7 +2035,7 @@ function openLevels(){
     frag.appendChild(b);
   }
   grid.appendChild(frag);
-  $('levelsStars').textContent = '⭐ ' + ts;
+  setHtml('levelsStars', IC.yildiz + ' ' + ts);
   show('levels');
   const c = grid.querySelector('.cur'); if (c) c.scrollIntoView({ block: 'center' });
 }
@@ -1840,7 +2151,9 @@ function spawnFish(f, ahead){
 }
 function placeCloud(c, ahead){
   const s = ball.s + (ahead ? 60 + Math.random() * 90 : -10 + Math.random() * 150);
-  const below = Math.random() < 0.55, side = Math.random() < 0.5 ? -1 : 1;
+  const side = Math.random() < 0.5 ? -1 : 1;
+  if (world.art){ worldAt(s, side * (13 + Math.random() * 26), 5 + Math.random() * 11, c.position); return; }   // picture clouds: high and to the sides
+  const below = Math.random() < 0.55;
   worldAt(s, below ? (Math.random() - 0.5) * 40 : side * (12 + Math.random() * 22), below ? -7 - Math.random() * 10 : -4 + Math.random() * 12, c.position);
 }
 function emitBubble(f){
@@ -1969,9 +2282,9 @@ function stepPlay(dt){
   // roll the ball (axis follows the curve)
   const c = centerAt(ball.s);
   const right = tmpV.set(Math.cos(c.h), 0, Math.sin(c.h));
-  if (moving) beaver.ball.rotateOnWorldAxis(right, -ball.speed * dt / R);
-  const fwd = new THREE.Vector3(Math.sin(c.h), 0, -Math.cos(c.h));
-  beaver.ball.rotateOnWorldAxis(fwd, ball.rollV * dt / R);
+  if (moving) rollAng = (rollAng - ball.speed * dt / R * 0.7) % (Math.PI * 2);
+  rollLean = lerp(rollLean, clamp(-ball.rollV * 0.08, -0.3, 0.3), 1 - Math.exp(-8 * dt));
+  ballTurn(beaver.ball.quaternion, c.h);
 
   // checkpoint flag
   if (flagS && !flagHit && ball.s > flagS && ball.grounded){
@@ -2002,7 +2315,7 @@ function stepPlay(dt){
     }
     if (Math.abs(ds) > 1.1) return;
     if (Math.abs(pk.lat - ball.lat) < reach && Math.abs(pk.y - ball.y) < reach){
-      pk.taken = true; pk.mesh.visible = false;
+      pk.taken = true; pk.popT = 0.28;
       if (pk.type === 'heart'){
         if (lives < MAX_LIVES){ lives++; toast('+1 can! ❤️', 1100); } else toast('Canların dolu! ❤️', 1000);
         sfx.heart(); burst(pk.mesh.position, 24, [0xff3a6a, 0xffffff, 0xff9ab8], 5);
@@ -2013,7 +2326,7 @@ function stepPlay(dt){
         follower = { m: sp, emoji: pk.kind, lat: ball.lat };
         sfx.heart(); toast(pk.kind + ' Bir arkadaş buldun!<br><span style="font-size:22px">Bitişe kadar götür!</span>', 1800);
       } else if (pk.type === 'gold'){
-        bankAdd(10); sfx.heart(); burst(pk.mesh.position, 24, [0xffd23a, 0xffffff], 6); toast('Altın elma! +10 🍎', 1200);
+        bankAdd(10); sfx.heart(); burst(pk.mesh.position, 24, [0xffd23a, 0xffffff], 6); toast('Altın para! +10 🍎', 1200);
       } else {
         apples++; bankAdd(1); sfx.apple(); burst(pk.mesh.position, 14, [0xffe066, 0xff6b6b, 0xffffff], 4);
         if (boss.active) boss.s -= 1.5;
@@ -2123,12 +2436,29 @@ function updateLevelObjects(dt){
   });
   // pickups bob
   pickups.forEach(pk => {
-    if (pk.taken) return;
+    const sp = pk.mesh.userData.sp;
+    if (pk.taken){
+      if (pk.popT > 0){   // hop up, grow a little and fade
+        pk.popT -= dt; const k = 1 - Math.max(0, pk.popT) / 0.28;
+        pk.mesh.position.y = pk.y + Math.sin(k * Math.PI * 0.5) * 0.9;
+        pk.mesh.scale.setScalar(pk.base * (1 + k * 0.5));
+        pk.mesh.traverse(o => { if (o.material && o.material.transparent !== undefined && o.isSprite){ o.material.opacity = 1 - k * k; } });
+        if (pk.popT <= 0) pk.mesh.visible = false;
+      }
+      return;
+    }
     pk.mesh.rotation.y += dt * 2;
     pk.mesh.position.y = pk.y + Math.sin(time * 3 + pk.ph) * 0.1;
+    if (sp){
+      const t = time * 2.2 + pk.ph, h = sp.userData.h;
+      if (sp.userData.k === 'altin'){ sp.scale.x = h * ITEM.altin[0] / ITEM.altin[1] * (0.3 + 0.7 * Math.abs(Math.cos(t))); }   // coin turns round
+      else if (sp.userData.k === 'kalp'){ const b = 1 + Math.max(0, Math.sin(t * 2.4)) * 0.1; sp.scale.set(h * ITEM.kalp[0] / ITEM.kalp[1] * b, h * b, 1); }   // heart beats
+      else sp.material.rotation = Math.sin(t) * 0.14;   // apple sways
+    }
   });
   winds.forEach(w => w.g.children.forEach((a, i) => { a.position.x = (((time * 0.9 + i / 3) % 1) - 0.5) * w.dir * w.width; }));
   decorAnims.forEach(fn => fn(time));
+  waveFlags(time);
   if (world.decor === 'volcano' && groundMesh.material.color){ groundMesh.material.color.setHSL(0.06, 1, 0.5 + Math.sin(time * 1.5) * 0.06); }
 }
 
@@ -2191,6 +2521,8 @@ function step(dt){
   const bob = state === 'play' && ball.grounded && ball.wait <= 0 ? Math.abs(Math.sin(ball.s * 2.2)) * 0.025 : 0;
   beaver.squash.scale.set(1 + sq * 0.5, 1 - sq, 1 + sq * 0.5);
   beaver.squash.position.y = -sq * R + bob;
+  updateBeaverPic(dt, c.h);
+  updateArt(dt, c.h);
 
   // shadow
   const gr = cX ? groundAt(ball.s, ball.lat) : null;
@@ -2221,9 +2553,10 @@ function step(dt){
     worldAt(ball.s - 7, ball.lat * 0.85, 3.4 + Math.max(0, ball.y - R) * 0.35, camTarget);
     worldAt(ball.s + 5, ball.lat * 0.9, 0.3, lookTarget);
   } else {
+    if (state === 'play') worldAt(ball.s - 6, ball.lat * 0.85, 3.6, camTarget);   // falling: stay above the road, keep up with the curve
     lookTarget.set(ballWorld.x, Math.max(ballWorld.y, -4), ballWorld.z);
   }
-  if (!(state === 'play' && ball.falling) && state !== 'lose') camera.position.lerp(camTarget, f);
+  if (state !== 'lose') camera.position.lerp(camTarget, state === 'play' && ball.falling ? f * 0.5 : f);
   lookCur.lerp(lookTarget, f);
   camera.lookAt(lookCur);
   camera.getWorldDirection(camFwd);

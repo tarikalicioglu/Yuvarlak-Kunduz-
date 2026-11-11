@@ -1,5 +1,5 @@
 // Network first, cache fallback: the game also opens without internet after the first visit.
-const CACHE = 'kunduz-top-v5';
+const CACHE = 'kunduz-top-v6';
 const CORE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'];
 
