@@ -308,6 +308,41 @@ let actx = null, muted = false;
 function initAudio(){
   if (actx){ if (actx.state === 'suspended') actx.resume().catch(()=>{}); return; }
   try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ actx = null; }
+  loadVoices();
+}
+
+// Hoppi's voice (Turkish and German mixed): ses/<group>-<n>.mp3
+const VOICE = { basla: ['basla'],
+  dusme: [...Array(10)].map((_, i) => 'dusme-tr-' + (i + 1)).concat([...Array(10)].map((_, i) => 'dusme-de-' + (i + 1))),
+  bitis: [...Array(8)].map((_, i) => 'bitis-tr-' + (i + 1)).concat([...Array(8)].map((_, i) => 'bitis-de-' + (i + 1))) };
+const voiceBuf = {}, voiceLast = {};
+let voicesAsked = false, voiceNow = null, voiceUntil = 0;
+function loadVoices(){
+  if (voicesAsked || !actx) return; voicesAsked = true;
+  Object.values(VOICE).flat().forEach(n => {
+    fetch('ses/' + n + '.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+      .then(b => new Promise((ok, no) => actx.decodeAudioData(b, ok, no)))
+      .then(buf => { voiceBuf[n] = buf; }).catch(() => {});
+  });
+}
+function playVoice(group, delay){
+  if (muted) return;
+  const list = VOICE[group].filter(n => voiceBuf[n]);
+  if (!actx || !list.length){   // not decoded yet (first tap): plain audio element
+    if (group === 'basla'){ try { const a = new Audio('ses/basla.mp3'); a.volume = 0.9; a.play().catch(() => {}); if (actx) voiceUntil = actx.currentTime + 3.8; } catch(e){} }
+    return;
+  }
+  let pick = list[Math.floor(Math.random() * list.length)];
+  if (list.length > 1) while (pick === voiceLast[group]) pick = list[Math.floor(Math.random() * list.length)];   // never the same twice in a row
+  voiceLast[group] = pick;
+  try {
+    if (voiceNow){ try { voiceNow.stop(); } catch(e){} }
+    const src = actx.createBufferSource(), g = actx.createGain();
+    src.buffer = voiceBuf[pick]; g.gain.value = 0.95;
+    src.connect(g); g.connect(actx.destination);
+    src.start(actx.currentTime + (delay || 0)); voiceNow = src;
+    voiceUntil = actx.currentTime + (delay || 0) + src.buffer.duration + 0.15;   // music stays down until Hoppi is done
+  } catch(e){}
 }
 function tone(f1, f2, dur, type, vol, delay){
   if (!actx || muted) return;
@@ -1818,30 +1853,29 @@ const MUSIC = [
   [262, [0,2,4,7,9], 104], [220, [0,2,4,7,9], 96], [294, [0,2,4,7,9], 112], [247, [0,2,5,7,9], 100], [196, [0,2,4,7,9], 92],
   [233, [0,3,5,7,10], 116], [208, [0,1,4,5,7], 98], [262, [0,2,4,7,11], 90], [175, [0,3,5,7,10], 88], [165, [0,3,5,7,10], 120]
 ];
-let musT = 0, musI = 0, musPat = null, musWi = -1;
-function musNote(f, t, dur, type, vol){
-  try {
-    const o = actx.createOscillator(), g = actx.createGain();
-    o.type = type; o.frequency.setValueAtTime(f, t);
-    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur + 0.03);
-  } catch(e){}
+// background music (ses/muzik.mp3): quiet in the menu, a bit louder in play, much quieter while Hoppi talks
+const MUSIC_VOL = { menu: 0.035, play: 0.05, talk: 0.012 };
+let musBuf = null, musSrc = null, musGain = null, musAsked = false;
+function loadMusic(){
+  if (musAsked || !actx) return; musAsked = true;
+  fetch('ses/muzik.mp3').then(r => r.ok ? r.arrayBuffer() : Promise.reject())
+    .then(b => new Promise((ok, no) => actx.decodeAudioData(b, ok, no)))
+    .then(buf => { musBuf = buf; }).catch(() => {});
 }
 function musicTick(){
-  if (!actx || muted || state !== 'play'){ musT = 0; return; }
-  const wi = WORLDS.indexOf(world), M = MUSIC[wi];
-  if (musWi !== wi || !musPat){
-    musWi = wi; musPat = []; const r = mulberry32(wi * 97 + 5); let d = 2;
-    for (let k = 0; k < 32; k++){ d = clamp(d + Math.floor(r() * 5) - 2, 0, 7); musPat.push(r() < 0.72 ? d : -1); }
+  if (!actx) return;
+  loadMusic();
+  if (!musBuf) return;
+  if (!musSrc){
+    try {
+      musGain = actx.createGain(); musGain.gain.value = 0; musGain.connect(actx.destination);
+      musSrc = actx.createBufferSource(); musSrc.buffer = musBuf; musSrc.loop = true; musSrc.connect(musGain); musSrc.start();
+    } catch(e){ return; }
   }
-  const stepDur = 60 / M[2] / 2;
-  if (musT < actx.currentTime) musT = actx.currentTime + 0.05;
-  while (musT < actx.currentTime + 0.25){
-    const d = musPat[musI % 32];
-    if (d >= 0) musNote(M[0] * Math.pow(2, (M[1][d % 5] + 12 * Math.floor(d / 5)) / 12), musT, stepDur * 0.9, 'triangle', 0.04);
-    if (musI % 8 === 0) musNote(M[0] / 2 * Math.pow(2, M[1][[0, 3, 0, 2][(musI / 8) % 4]] / 12), musT, stepDur * 3.5, 'sine', 0.05);
-    musI++; musT += stepDur;
-  }
+  let v = (state === 'play' || state === 'count' || state === 'win' || state === 'lose') ? MUSIC_VOL.play : MUSIC_VOL.menu;
+  if (voiceUntil > actx.currentTime) v = Math.min(v, MUSIC_VOL.talk);
+  if (muted || state === 'pause' || document.hidden) v = 0;
+  musGain.gain.setTargetAtTime(v, actx.currentTime, 0.12);   // smooth fade
 }
 
 // ---------- ui ----------
@@ -1991,7 +2025,7 @@ function loseLife(){
 }
 function winLevel(){
   state = 'win'; winT = 0; celebrateT = 0;
-  setForm('stand'); sfx.win();
+  setForm('stand'); sfx.win(); playVoice('bitis', 0.35);
   power.kind = null; gScale = 1;
   burst(worldAt(ball.s, ball.lat, 1.2), 40, [0xffe066, 0xff6b6b, 0x7cc4ff, 0x7fd8a8, 0xc5a0ff], 6);
   let extra = '', st = 0;
@@ -2091,6 +2125,7 @@ function openAdmin(){
   show('admin');
 }
 $('playBtn').addEventListener('click', () => {
+  initAudio(); playVoice('basla');
   const n = Math.min(save.unlocked, MAX_LEVEL);
   if (canPlay(n)) startLevel(n); else { openLevels(); toast(starMsg(n), 2200); }
 });
@@ -2275,7 +2310,7 @@ function stepPlay(dt){
   } else {
     ball.grounded = false; ball.onMover = null;
     ball.coyote = Math.max(0, ball.coyote - dt);
-    if (!ball.falling && ball.y < R - 0.6){ ball.falling = true; sfx.fall(); }
+    if (!ball.falling && ball.y < R - 0.6){ ball.falling = true; sfx.fall(); playVoice('dusme'); }
   }
   if (ball.y < -9){ loseLife(); return; }
 
@@ -2343,7 +2378,7 @@ function stepPlay(dt){
       if (power.kind === 'giant'){ o.dead = true; o.mesh.visible = false; burst(o.mesh.position, 18, [0xffffff, 0xffcf3f, 0xff8fb1], 7); sfx.bonk(); continue; }
       if (ball.invuln > 0) continue;
       if (power.shield){ power.shield = false; ball.invuln = 1.2; sfx.bonk(); burst(ballWorld, 20, [0x7cd8ff, 0xffffff], 6); toast('Kalkan seni korudu! 🛡️', 1000); break; }
-      sfx.bonk(); ball.falling = true; ball.vy = 5; ball.grounded = false;
+      sfx.bonk(); ball.falling = true; ball.vy = 5; ball.grounded = false; playVoice('dusme', 0.1);
       ball.rollV = (o.curLat > ball.lat ? -1 : 1) * 4;
       break;
     }
