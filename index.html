@@ -2074,7 +2074,7 @@ function setMute(m){ muted = m; const t = muted ? '🔇 Ses: Kapalı' : '🔊 Se
 function openColl(){
   const st = houseStage(), nextAt = HOUSE_AT[st];
   let h = '<div class="card">✏️ Adın: <input id="nameIn" maxlength="12" placeholder="Adını yaz" value="' + esc(save.name || '') + '"></div>';
-  h += '<div class="card">🏠 <b>Hoppi'nin evi:</b> ' + st + '/7<br><small>' + (nextAt ? 'Sonraki aşama için ' + (nextAt - save.total) + ' 🍎 daha topla' : 'Ev tamamlandı!') + '</small></div>';
+  h += '<div class="card">🏠 <b>Hoppi’nin evi:</b> ' + st + '/7<br><small>' + (nextAt ? 'Sonraki aşama için ' + (nextAt - save.total) + ' 🍎 daha topla' : 'Ev tamamlandı!') + '</small></div>';
   h += '<div class="card">⭐ ' + totalStars() + ' yıldız &nbsp; 🍎 ' + save.total + ' elma (toplam)<br>∞ Sonsuz mod rekoru: ' + (save.endlessBest || 0) + ' m</div>';
   h += '<div class="card"><b>Boss rozetleri</b><div class="emo">' + WORLDS.map((w, i) => '<span class="' + (save.badges[i] ? '' : 'off') + '">' + w.emoji + '</span>').join('') + '</div></div>';
   h += '<div class="card"><b>Kurtarılan arkadaşlar</b><div class="emo">' + FRIENDS.map(f => '<span class="' + (save.friends[f] ? '' : 'off') + '">' + f + (save.friends[f] ? '<small>×' + save.friends[f] + '</small>' : '') + '</span>').join('') + '</div></div>';
