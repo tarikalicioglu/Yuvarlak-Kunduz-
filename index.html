@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Kunduz Top</title>
+<title>Happy Hoppi</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#5fb2ea">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Kunduz Top">
+<meta name="apple-mobile-web-app-title" content="Happy Hoppi">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -175,7 +175,7 @@
 
 <div class="overlay" id="menu">
   <div>
-    <h1>Kunduz Top</h1>
+    <h1>Happy Hoppi</h1>
     <p class="sub" id="menuWorld"></p>
     <p class="sub" id="menuBank"></p>
   </div>
@@ -261,7 +261,7 @@
 <div class="overlay dim hidden" id="sleep">
 <div class="sheet">
   <img class="pose" src="art/kunduz-sleep.webp" alt="" onerror="this.remove()">
-  <h2>Kunduz yoruldu</h2>
+  <h2>Hoppi yoruldu</h2>
   <div class="stats">Bugünlük bu kadar yeter.<br>Yarın devam edelim!</div>
   <div class="btns"><button class="big" id="sleepOk">Tamam</button></div>
 </div>
@@ -899,7 +899,7 @@ const POW = {
   magnet: { icon: '🧲', t: 8, name: 'Mıknatıs' },
   shield: { icon: '🛡️', t: 0, name: 'Kalkan' },
   wing:   { icon: '🎈', t: 7, name: 'Balon' },
-  giant:  { icon: '⭐', t: 6, name: 'Dev Kunduz' }
+  giant:  { icon: '⭐', t: 6, name: 'Dev Hoppi' }
 };
 const FRIENDS = ['🐥','🦔','🦀','🐬','🐐','🐱','🦎','🐧','👽','🐲'];
 const grav = () => world.decor === 'space' ? 15 : G;
@@ -2074,7 +2074,7 @@ function setMute(m){ muted = m; const t = muted ? '🔇 Ses: Kapalı' : '🔊 Se
 function openColl(){
   const st = houseStage(), nextAt = HOUSE_AT[st];
   let h = '<div class="card">✏️ Adın: <input id="nameIn" maxlength="12" placeholder="Adını yaz" value="' + esc(save.name || '') + '"></div>';
-  h += '<div class="card">🏠 <b>Kunduzun evi:</b> ' + st + '/7<br><small>' + (nextAt ? 'Sonraki aşama için ' + (nextAt - save.total) + ' 🍎 daha topla' : 'Ev tamamlandı!') + '</small></div>';
+  h += '<div class="card">🏠 <b>Hoppi'nin evi:</b> ' + st + '/7<br><small>' + (nextAt ? 'Sonraki aşama için ' + (nextAt - save.total) + ' 🍎 daha topla' : 'Ev tamamlandı!') + '</small></div>';
   h += '<div class="card">⭐ ' + totalStars() + ' yıldız &nbsp; 🍎 ' + save.total + ' elma (toplam)<br>∞ Sonsuz mod rekoru: ' + (save.endlessBest || 0) + ' m</div>';
   h += '<div class="card"><b>Boss rozetleri</b><div class="emo">' + WORLDS.map((w, i) => '<span class="' + (save.badges[i] ? '' : 'off') + '">' + w.emoji + '</span>').join('') + '</div></div>';
   h += '<div class="card"><b>Kurtarılan arkadaşlar</b><div class="emo">' + FRIENDS.map(f => '<span class="' + (save.friends[f] ? '' : 'off') + '">' + f + (save.friends[f] ? '<small>×' + save.friends[f] + '</small>' : '') + '</span>').join('') + '</div></div>';

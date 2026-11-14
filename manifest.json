@@ -1,7 +1,7 @@
 {
-  "name": "Kunduz Top",
-  "short_name": "Kunduz Top",
-  "description": "Gökyüzündeki yolda yuvarlanan sevimli kunduz oyunu",
+  "name": "Happy Hoppi",
+  "short_name": "Happy Hoppi",
+  "description": "Gökyüzündeki yolda yuvarlanan sevimli Hoppi oyunu",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",
